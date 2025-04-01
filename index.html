@@ -2,48 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Upload WAV to Cloud Run</title>
+  <title>Cloud Run Test</title>
 </head>
 <body>
-  <h1>Upload WAV File</h1>
-  <form id="uploadForm">
-    <input type="file" id="wavFile" accept=".wav" required>
-    <button type="submit">Send</button>
-  </form>
+  <h1>Trigger Cloud Run</h1>
+  <button onclick="callCloudRun()">Send Request</button>
+  <p id="response"></p>
 
   <script>
-    const form = document.getElementById('uploadForm');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const fileInput = document.getElementById('wavFile');
-      const file = fileInput.files[0];
-
-      if (!file) {
-        alert('Please select a file');
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('file', file);
-
+    async function callCloudRun() {
+      const responseBox = document.getElementById('response');
       try {
-        const response = await fetch('https://your-cloud-run-url.a.run.app/upload', {
-          method: 'POST',
-          body: formData
+        const res = await fetch('https://gitcloud-1053060340132.us-central1.run.app', {
+          method: 'GET', // or 'POST'
         });
-
-        if (response.ok) {
-          alert('File uploaded successfully');
-        } else {
-          alert('Upload failed');
-        }
-      } catch (error) {
-        alert('Error uploading file');
-        console.error(error);
+        const text = await res.text();
+        responseBox.textContent = 'Response: ' + text;
+      } catch (err) {
+        console.error(err);
+        responseBox.textContent = 'Error: ' + err;
       }
-    });
+    }
   </script>
 </body>
 </html>
