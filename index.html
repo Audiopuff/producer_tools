@@ -1,28 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Cloud Run Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Processing Service</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f8f8;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1, h2 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .upload-form, .status, .result {
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-input {
+            margin-bottom: 15px;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .status {
+            text-align: center;
+        }
+
+        .result {
+            text-align: center;
+        }
+
+        audio {
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .download-link {
+            margin-top: 15px;
+        }
+
+        .download-link a {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+
+        .download-link a:hover {
+            background-color: #0b7dda;
+        }
+    </style>
 </head>
 <body>
-  <h1>Trigger Cloud Run</h1>
-  <button onclick="callCloudRun()">Send Request</button>
-  <p id="response"></p>
-
-  <script>
-    async function callCloudRun() {
-      const responseBox = document.getElementById('response');
-      try {
-        const res = await fetch('https://gitcloud-app2-1053060340132.us-central1.run.app', {
-          method: 'GET', // or 'POST'
+    <div class="container">
+        <h1>Audio Processing Service</h1>
+        <div class="upload-form">
+            <h2>Upload WAV File</h2>
+            <form id="uploadForm">
+                <div class="file-input">
+                    <input type="file" id="audioFile" accept=".wav" required>
+                </div>
+                <button type="submit" id="uploadButton">Upload and Process</button>
+            </form>
+        </div>
+        <div class="status" id="statusContainer">
+            <p id="statusMessage"></p>
+        </div>
+        <div class="result" id="resultContainer" style="display: none;">
+            <h2>Processed Audio</h2>
+            <audio id="processedAudio" controls></audio>
+            <div class="download-link">
+                <a id="downloadLink" href="#">Download Processed File</a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const uploadForm = document.getElementById('uploadForm');
+            const statusMessage = document.getElementById('statusMessage');
+            const resultContainer = document.getElementById('resultContainer');
+            const processedAudio = document.getElementById('processedAudio');
+            const downloadLink = document.getElementById('downloadLink');
+            
+            // Trigger service URL (replace with your actual deployed URL)
+            // This will be the URL where your trigger container is deployed
+            const triggerServiceUrl = 'https://your-trigger-service-url/';
+            
+            uploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const audioFile = document.getElementById('audioFile').files[0];
+                if (!audioFile) {
+                    statusMessage.textContent = 'Please select a WAV file.';
+                    return;
+                }
+                
+                // Show uploading status
+                statusMessage.textContent = 'Uploading file...';
+                
+                // Create form data to send the file
+                const formData = new FormData();
+                formData.append('audioFile', audioFile);
+                
+                try {
+                    // Send the file to our trigger service
+                    const response = await fetch(triggerServiceUrl + 'upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Upload failed');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Start polling for the processing status
+                    statusMessage.textContent = 'Processing audio...';
+                    pollProcessingStatus(data.jobId);
+                } catch (error) {
+                    console.error('Error:', error);
+                    statusMessage.textContent = 'Error: ' + error.message;
+                }
+            });
+            
+            // Function to poll the processing status
+            async function pollProcessingStatus(jobId) {
+                try {
+                    const response = await fetch(triggerServiceUrl + 'status/' + jobId);
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to get status');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'completed') {
+                        // Processing completed successfully
+                        statusMessage.textContent = 'Processing completed!';
+                        
+                        // Set the audio source and download link
+                        processedAudio.src = triggerServiceUrl + 'download/' + jobId;
+                        downloadLink.href = triggerServiceUrl + 'download/' + jobId;
+                        downloadLink.download = 'processed_' + data.filename;
+                        
+                        // Show the result container
+                        resultContainer.style.display = 'block';
+                    } else if (data.status === 'failed') {
+                        // Processing failed
+                        statusMessage.textContent = 'Processing failed: ' + data.error;
+                    } else {
+                        // Still processing, poll again after a delay
+                        statusMessage.textContent = 'Processing audio...';
+                        setTimeout(() => pollProcessingStatus(jobId), 2000);
+                    }
+                } catch (error) {
+                    console.error('Error polling status:', error);
+                    statusMessage.textContent = 'Error checking status: ' + error.message;
+                }
+            }
         });
-        const text = await res.text();
-        responseBox.textContent = 'Response: ' + text;
-      } catch (err) {
-        console.error(err);
-        responseBox.textContent = 'Error: ' + err;
-      }
-    }
-  </script>
+    </script>
 </body>
 </html>
