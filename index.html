@@ -129,8 +129,6 @@
             <audio id="processedAudio" controls></audio>
             <div class="download-link">
                 <a id="downloadLink" href="#">Download Mixed File</a>
-                <a id="downloadBassBtnLink" href="#">Download Bass Processed</a>
-                <a id="downloadDrumsBtnLink" href="#">Download Drums Processed</a>
             </div>
         </div>
     </div>
@@ -142,14 +140,13 @@
             const resultContainer = document.getElementById('resultContainer');
             const processedAudio = document.getElementById('processedAudio');
             const downloadLink = document.getElementById('downloadLink');
-            const downloadBassBtnLink = document.getElementById('downloadBassBtnLink');
-            const downloadDrumsBtnLink = document.getElementById('downloadDrumsBtnLink');
             
             // Trigger service URL (replace with your actual deployed URL)
             const triggerServiceUrl = 'https://trigger2-1053060340132.us-central1.run.app/';
             
-            // Track current job ID
-            let currentJobId = null;
+            // Track current job IDs
+            let bassJobId = null;
+            let drumsJobId = null;
             
             uploadForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -182,7 +179,7 @@
                     }
                     
                     const bassData = await bassResponse.json();
-                    const bassJobId = bassData.jobId;
+                    bassJobId = bassData.jobId;
                     
                     // Now upload drums file
                     statusMessage.textContent = 'Uploading drums file...';
@@ -200,10 +197,7 @@
                     }
                     
                     const drumsData = await drumsResponse.json();
-                    const drumsJobId = drumsData.jobId;
-                    
-                    // Use the bass job ID for polling (could use either one)
-                    currentJobId = bassJobId;
+                    drumsJobId = drumsData.jobId;
                     
                     // Start polling for the processing status
                     statusMessage.textContent = 'Processing audio files...';
@@ -233,25 +227,30 @@
                     
                     // Check if both jobs are completed
                     if (bassData.status === 'completed' && drumsData.status === 'completed') {
-                        // Processing completed successfully
-                        statusMessage.textContent = 'Processing completed!';
+                        // Check if a mixed file is available (look in either job status)
+                        let mixedUrl = null;
+                        if (bassData.downloadUrl_mixed) {
+                            mixedUrl = triggerServiceUrl + bassData.downloadUrl_mixed.substring(1); // Remove leading slash
+                        } else if (drumsData.downloadUrl_mixed) {
+                            mixedUrl = triggerServiceUrl + drumsData.downloadUrl_mixed.substring(1); // Remove leading slash
+                        }
                         
-                        // Set the download links
-                        // Main download link (we'll use bass by default)
-                        processedAudio.src = triggerServiceUrl + 'download/' + bassJobId;
-                        downloadLink.href = triggerServiceUrl + 'download/' + bassJobId;
-                        downloadLink.download = 'processed_mixed_audio.wav';
-                        
-                        // Bass-specific download
-                        downloadBassBtnLink.href = triggerServiceUrl + 'download/' + bassJobId + '/bass';
-                        downloadBassBtnLink.download = 'processed_bass_' + bassData.filename;
-                        
-                        // Drums-specific download
-                        downloadDrumsBtnLink.href = triggerServiceUrl + 'download/' + drumsJobId + '/drums';
-                        downloadDrumsBtnLink.download = 'processed_drums_' + drumsData.filename;
-                        
-                        // Show the result container
-                        resultContainer.style.display = 'block';
+                        if (mixedUrl) {
+                            // Mixed file is available
+                            processedAudio.src = mixedUrl;
+                            downloadLink.href = mixedUrl;
+                            downloadLink.download = 'mixed_audio.wav';
+                            
+                            // Processing completed successfully
+                            statusMessage.textContent = 'Processing completed!';
+                            
+                            // Show the result container
+                            resultContainer.style.display = 'block';
+                        } else {
+                            // Mixed file is not available yet, wait a bit longer
+                            statusMessage.textContent = 'Mixing files...';
+                            setTimeout(() => pollProcessingStatus(bassJobId, drumsJobId), 2000);
+                        }
                     } else if (bassData.status === 'failed' || drumsData.status === 'failed') {
                         // Processing failed
                         let errorMessage = '';
