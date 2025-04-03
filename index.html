@@ -149,73 +149,59 @@
         <div class="result" id="resultContainer" style="display: none;">
             <h2>Processed Audio</h2>
             <div class="processed-file">
-                <h3>Ducked Bass</h3>
-                <audio id="processedBassDucked" controls></audio>
+                <h3>Combined Mix</h3>
+                <audio id="processedMix" controls></audio>
                 <div class="download-link">
-                    <a id="downloadBassLink" href="#">Download Ducked Bass</a>
-                </div>
-            </div>
-            <div class="processed-file">
-                <h3>Ducked Drums</h3>
-                <audio id="processedDrumsDucked" controls></audio>
-                <div class="download-link">
-                    <a id="downloadDrumsLink" href="#">Download Ducked Drums</a>
+                    <a id="downloadMixLink" href="#">Download Combined Mix</a>
                 </div>
             </div>
         </div>
     </div>
     
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function() {
             const uploadForm = document.getElementById('uploadForm');
+            const uploadButton = document.getElementById('uploadButton');
             const statusMessage = document.getElementById('statusMessage');
             const processingStage = document.getElementById('processingStage');
             const resultContainer = document.getElementById('resultContainer');
             
-            // Trigger service URL (replace with your actual deployed URL)
-            const triggerServiceUrl = 'https://trigger3-1053060340132.us-central1.run.app/';
+            // Get the trigger service URL from environment or use default
+            const triggerServiceUrl = window.TRIGGER_SERVICE_URL || 'https://trigger-1053060340132.us-central1.run.app/';
             
-            // Track current job IDs
-            let bassJobId = null;
-            let drumsJobId = null;
-            
-            uploadForm.addEventListener('submit', async (e) => {
+            uploadForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
+                // Disable the upload button
+                uploadButton.disabled = true;
+                uploadButton.textContent = 'Uploading...';
+                
+                // Get the files
                 const bassFile = document.getElementById('bassFile').files[0];
                 const drumsFile = document.getElementById('drumsFile').files[0];
                 
                 if (!bassFile || !drumsFile) {
                     statusMessage.textContent = 'Please select both bass and drums files.';
+                    uploadButton.disabled = false;
+                    uploadButton.textContent = 'Upload and Process';
                     return;
                 }
                 
-                // Reset UI
-                resultContainer.style.display = 'none';
-                statusMessage.textContent = 'Uploading bass file...';
-                processingStage.textContent = '';
-                
-                // First upload bass file
-                const bassFormData = new FormData();
-                bassFormData.append('audioFile', bassFile);
-                bassFormData.append('target_processor', 'bass');
-                
                 try {
                     // Upload bass file
+                    const bassFormData = new FormData();
+                    bassFormData.append('audioFile', bassFile);
+                    bassFormData.append('target_processor', 'bass');
+                    
                     const bassResponse = await fetch(triggerServiceUrl + 'upload', {
                         method: 'POST',
                         body: bassFormData
                     });
                     
-                    if (!bassResponse.ok) {
-                        throw new Error('Bass upload failed');
-                    }
-                    
+                    if (!bassResponse.ok) throw new Error('Failed to upload bass file');
                     const bassData = await bassResponse.json();
-                    bassJobId = bassData.jobId;
                     
-                    // Now upload drums file
-                    statusMessage.textContent = 'Uploading drums file...';
+                    // Upload drums file
                     const drumsFormData = new FormData();
                     drumsFormData.append('audioFile', drumsFile);
                     drumsFormData.append('target_processor', 'drums');
@@ -225,42 +211,31 @@
                         body: drumsFormData
                     });
                     
-                    if (!drumsResponse.ok) {
-                        throw new Error('Drums upload failed');
-                    }
-                    
+                    if (!drumsResponse.ok) throw new Error('Failed to upload drums file');
                     const drumsData = await drumsResponse.json();
-                    drumsJobId = drumsData.jobId;
                     
-                    // Start polling for the processing status
-                    statusMessage.textContent = 'Processing audio files...';
-                    processingStage.textContent = 'Initial processing started';
-                    pollProcessingStatus(bassJobId, drumsJobId);
+                    // Start polling for status
+                    statusMessage.textContent = 'Processing started...';
+                    pollProcessingStatus(bassData.jobId, drumsData.jobId);
+                    
                 } catch (error) {
                     console.error('Error:', error);
                     statusMessage.textContent = 'Error: ' + error.message;
-                    processingStage.textContent = '';
+                    uploadButton.disabled = false;
+                    uploadButton.textContent = 'Upload and Process';
                 }
             });
             
-            // Function to update the result container with processed files
-            function updateResultContainer(bassPath, drumsPath) {
+            function updateResultContainer(combinedPath) {
                 // Show the result container
                 resultContainer.style.display = 'block';
                 
-                // Update bass audio and download
-                const processedBassDucked = document.getElementById('processedBassDucked');
-                const downloadBassLink = document.getElementById('downloadBassLink');
-                processedBassDucked.src = bassPath;
-                downloadBassLink.href = bassPath;
-                downloadBassLink.download = 'ducked_bass.wav';
-                
-                // Update drums audio and download
-                const processedDrumsDucked = document.getElementById('processedDrumsDucked');
-                const downloadDrumsLink = document.getElementById('downloadDrumsLink');
-                processedDrumsDucked.src = drumsPath;
-                downloadDrumsLink.href = drumsPath;
-                downloadDrumsLink.download = 'ducked_drums.wav';
+                // Update mix audio and download
+                const processedMix = document.getElementById('processedMix');
+                const downloadMixLink = document.getElementById('downloadMixLink');
+                processedMix.src = combinedPath;
+                downloadMixLink.href = combinedPath;
+                downloadMixLink.download = 'combined_mix.wav';
             }
             
             // Function to poll the processing status
@@ -288,16 +263,20 @@
                         }
                         statusMessage.textContent = errorMessage;
                         processingStage.textContent = 'Processing failed';
+                        uploadButton.disabled = false;
+                        uploadButton.textContent = 'Upload and Process';
                     }
                     // Check for ducking completion
                     else if (bassData.status === 'ducking_completed' && drumsData.status === 'ducking_completed') {
                         statusMessage.textContent = 'Processing and ducking completed!';
                         processingStage.textContent = '';
                         
-                        // Update audio players and download links
-                        if (bassData.mixed_output_path && drumsData.mixed_output_path) {
-                            updateResultContainer(bassData.mixed_output_path, drumsData.mixed_output_path);
+                        // Update audio player and download link with combined mix
+                        if (bassData.combined_output_path) {
+                            updateResultContainer(bassData.combined_output_path);
                         }
+                        uploadButton.disabled = false;
+                        uploadButton.textContent = 'Upload and Process';
                     }
                     // Check if ready for ducking
                     else if (bassData.status === 'completed' && drumsData.status === 'completed') {
@@ -315,6 +294,8 @@
                     console.error('Error polling status:', error);
                     statusMessage.textContent = 'Error checking status: ' + error.message;
                     processingStage.textContent = '';
+                    uploadButton.disabled = false;
+                    uploadButton.textContent = 'Upload and Process';
                 }
             }
         });
