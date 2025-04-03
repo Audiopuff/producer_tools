@@ -167,7 +167,7 @@
             const resultContainer = document.getElementById('resultContainer');
             
             // Get the trigger service URL from environment or use default
-            const triggerServiceUrl = window.TRIGGER_SERVICE_URL || 'https://trigger-1053060340132.us-central1.run.app/';
+            const triggerServiceUrl = window.TRIGGER_SERVICE_URL || 'https://apmain8-1053060340132.us-central1.run.app/';
             
             uploadForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -226,15 +226,17 @@
                 }
             });
             
-            function updateResultContainer(combinedPath) {
+            function updateResultContainer(bassJobId) {
                 // Show the result container
                 resultContainer.style.display = 'block';
                 
-                // Update mix audio and download
+                // Update mix audio and download links to use the download endpoint
+                const downloadUrl = `${triggerServiceUrl}download/${bassJobId}`;
                 const processedMix = document.getElementById('processedMix');
                 const downloadMixLink = document.getElementById('downloadMixLink');
-                processedMix.src = combinedPath;
-                downloadMixLink.href = combinedPath;
+                
+                processedMix.src = downloadUrl;
+                downloadMixLink.href = downloadUrl;
                 downloadMixLink.download = 'combined_mix.wav';
             }
             
@@ -271,10 +273,8 @@
                         statusMessage.textContent = 'Processing and ducking completed!';
                         processingStage.textContent = '';
                         
-                        // Update audio player and download link with combined mix
-                        if (bassData.combined_output_path) {
-                            updateResultContainer(bassData.combined_output_path);
-                        }
+                        // Update audio player and download link using the bass job ID
+                        updateResultContainer(bassJobId);
                         uploadButton.disabled = false;
                         uploadButton.textContent = 'Upload and Process';
                     }
