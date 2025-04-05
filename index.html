@@ -25,7 +25,7 @@
             padding: 20px;
         }
 
-        h1, h2, h3 {
+        h1, h2 {
             margin-bottom: 20px;
             text-align: center;
         }
@@ -81,20 +81,6 @@
             text-align: center;
         }
 
-        .processed-file {
-            margin-bottom: 30px;
-            padding: 15px;
-            border: 1px solid #eee;
-            border-radius: 5px;
-            background-color: #fafafa;
-        }
-
-        .processed-file h3 {
-            margin-bottom: 15px;
-            color: #333;
-            font-size: 1.2em;
-        }
-
         audio {
             width: 100%;
             margin: 20px 0;
@@ -130,14 +116,11 @@
     <div class="container">
         <h1>Audio Processing Service</h1>
         <div class="upload-form">
-            <h2>Upload Audio Files</h2>
+            <h2>Upload Audio File</h2>
             <form id="uploadForm">
                 <div class="file-input">
-                    <label for="bassFile">Bass File (WAV or MP3):</label>
-                    <input type="file" id="bassFile" accept=".wav,.mp3" required>
-                    
-                    <label for="drumsFile">Drums File (WAV or MP3):</label>
-                    <input type="file" id="drumsFile" accept=".wav,.mp3" required>
+                    <label for="audioFile">Audio File (WAV or MP3):</label>
+                    <input type="file" id="audioFile" accept=".wav,.mp3" required>
                 </div>
                 <button type="submit" id="uploadButton">Upload and Process</button>
             </form>
@@ -148,12 +131,9 @@
         </div>
         <div class="result" id="resultContainer" style="display: none;">
             <h2>Processed Audio</h2>
-            <div class="processed-file">
-                <h3>Combined Mix</h3>
-                <audio id="processedMix" controls></audio>
-                <div class="download-link">
-                    <a id="downloadMixLink" href="#">Download Combined Mix</a>
-                </div>
+            <audio id="processedAudio" controls></audio>
+            <div class="download-link">
+                <a id="downloadLink" href="#">Download Processed Audio</a>
             </div>
         </div>
     </div>
@@ -166,8 +146,8 @@
             const processingStage = document.getElementById('processingStage');
             const resultContainer = document.getElementById('resultContainer');
             
-            // Get the trigger service URL from environment or use default
-            const triggerServiceUrl = window.TRIGGER_SERVICE_URL || 'https://trigger-1053060340132.us-central1.run.app/';
+            // Get the service URL from environment or use default
+            const serviceUrl = window.SERVICE_URL || 'https://apmain-1053060340132.us-central1.run.app/';
             
             uploadForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -176,47 +156,32 @@
                 uploadButton.disabled = true;
                 uploadButton.textContent = 'Uploading...';
                 
-                // Get the files
-                const bassFile = document.getElementById('bassFile').files[0];
-                const drumsFile = document.getElementById('drumsFile').files[0];
+                // Get the file
+                const audioFile = document.getElementById('audioFile').files[0];
                 
-                if (!bassFile || !drumsFile) {
-                    statusMessage.textContent = 'Please select both bass and drums files.';
+                if (!audioFile) {
+                    statusMessage.textContent = 'Please select an audio file.';
                     uploadButton.disabled = false;
                     uploadButton.textContent = 'Upload and Process';
                     return;
                 }
                 
                 try {
-                    // Upload bass file
-                    const bassFormData = new FormData();
-                    bassFormData.append('audioFile', bassFile);
-                    bassFormData.append('target_processor', 'bass');
+                    // Upload file
+                    const formData = new FormData();
+                    formData.append('file', audioFile);
                     
-                    const bassResponse = await fetch(triggerServiceUrl + 'upload', {
+                    const response = await fetch(serviceUrl + 'upload', {
                         method: 'POST',
-                        body: bassFormData
+                        body: formData
                     });
                     
-                    if (!bassResponse.ok) throw new Error('Failed to upload bass file');
-                    const bassData = await bassResponse.json();
-                    
-                    // Upload drums file
-                    const drumsFormData = new FormData();
-                    drumsFormData.append('audioFile', drumsFile);
-                    drumsFormData.append('target_processor', 'drums');
-                    
-                    const drumsResponse = await fetch(triggerServiceUrl + 'upload', {
-                        method: 'POST',
-                        body: drumsFormData
-                    });
-                    
-                    if (!drumsResponse.ok) throw new Error('Failed to upload drums file');
-                    const drumsData = await drumsResponse.json();
+                    if (!response.ok) throw new Error('Failed to upload file');
+                    const data = await response.json();
                     
                     // Start polling for status
                     statusMessage.textContent = 'Processing started...';
-                    pollProcessingStatus(bassData.jobId, drumsData.jobId);
+                    pollProcessingStatus(data.jobId);
                     
                 } catch (error) {
                     console.error('Error:', error);
@@ -226,69 +191,36 @@
                 }
             });
             
-            function updateResultContainer(bassJobId) {
-                // Show the result container
-                resultContainer.style.display = 'block';
-                
-                // Update mix audio and download links to use the download endpoint
-                const downloadUrl = `${triggerServiceUrl}download/${bassJobId}`;
-                const processedMix = document.getElementById('processedMix');
-                const downloadMixLink = document.getElementById('downloadMixLink');
-                
-                processedMix.src = downloadUrl;
-                downloadMixLink.href = downloadUrl;
-                downloadMixLink.download = 'combined_mix.wav';
-            }
-            
-            // Function to poll the processing status
-            async function pollProcessingStatus(bassJobId, drumsJobId) {
+            async function pollProcessingStatus(jobId) {
                 try {
-                    // Check bass job status
-                    const bassResponse = await fetch(triggerServiceUrl + 'status/' + bassJobId);
-                    if (!bassResponse.ok) throw new Error('Failed to get bass status');
-                    const bassData = await bassResponse.json();
+                    const response = await fetch(serviceUrl + 'status/' + jobId);
+                    if (!response.ok) throw new Error('Failed to get status');
+                    const data = await response.json();
                     
-                    // Check drums job status
-                    const drumsResponse = await fetch(triggerServiceUrl + 'status/' + drumsJobId);
-                    if (!drumsResponse.ok) throw new Error('Failed to get drums status');
-                    const drumsData = await drumsResponse.json();
-                    
-                    // Update status based on processing stage
-                    if (bassData.status === 'failed' || drumsData.status === 'failed') {
-                        // Handle failures
-                        let errorMessage = '';
-                        if (bassData.status === 'failed') {
-                            errorMessage += 'Bass processing failed: ' + bassData.error + ' ';
-                        }
-                        if (drumsData.status === 'failed') {
-                            errorMessage += 'Drums processing failed: ' + drumsData.error;
-                        }
-                        statusMessage.textContent = errorMessage;
-                        processingStage.textContent = 'Processing failed';
+                    if (data.status === 'failed') {
+                        statusMessage.textContent = 'Processing failed: ' + data.error;
+                        processingStage.textContent = '';
                         uploadButton.disabled = false;
                         uploadButton.textContent = 'Upload and Process';
                     }
-                    // Check for ducking completion
-                    else if (bassData.status === 'ducking_completed' && drumsData.status === 'ducking_completed') {
-                        statusMessage.textContent = 'Processing and ducking completed!';
+                    else if (data.status === 'completed') {
+                        statusMessage.textContent = 'Processing completed!';
                         processingStage.textContent = '';
                         
-                        // Update audio player and download link using the bass job ID
-                        updateResultContainer(bassJobId);
+                        // Show result
+                        resultContainer.style.display = 'block';
+                        const downloadUrl = `${serviceUrl}download/${jobId}`;
+                        document.getElementById('processedAudio').src = downloadUrl;
+                        document.getElementById('downloadLink').href = downloadUrl;
+                        
                         uploadButton.disabled = false;
                         uploadButton.textContent = 'Upload and Process';
                     }
-                    // Check if ready for ducking
-                    else if (bassData.status === 'completed' && drumsData.status === 'completed') {
-                        statusMessage.textContent = 'Initial processing complete';
-                        processingStage.textContent = 'Applying ducking...';
-                        setTimeout(() => pollProcessingStatus(bassJobId, drumsJobId), 2000);
-                    }
-                    // Still in initial processing
                     else {
-                        statusMessage.textContent = 'Processing audio files...';
-                        processingStage.textContent = 'Initial processing in progress';
-                        setTimeout(() => pollProcessingStatus(bassJobId, drumsJobId), 2000);
+                        // Update status message based on current stage
+                        statusMessage.textContent = 'Processing in progress...';
+                        processingStage.textContent = data.stage || 'Processing';
+                        setTimeout(() => pollProcessingStatus(jobId), 2000);
                     }
                 } catch (error) {
                     console.error('Error polling status:', error);
