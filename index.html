@@ -124,17 +124,54 @@
             font-style: italic;
             color: #666;
         }
+
+        .how-to-use {
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .how-to-use ul {
+            list-style-type: disc;
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .how-to-use li {
+            margin-bottom: 8px;
+        }
+
+        .important-note {
+            color: #d32f2f;
+            font-weight: bold;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Audio Processing Service</h1>
+        
+        <div class="how-to-use">
+            <h2>How to Use</h2>
+            <ul>
+                <li>This service works best with music that contains bass, drums, and vocals</li>
+                <li>Only MP3 files are accepted</li>
+                <li>Processing can take up to 30 minutes</li>
+                <li>Keep your browser window open during processing</li>
+            </ul>
+            <p class="important-note">Important: Please do not close your browser window while processing is in progress!</p>
+        </div>
+
         <div class="upload-form">
             <h2>Upload Audio File</h2>
             <form id="uploadForm">
                 <div class="file-input">
-                    <label for="audioFile">Audio File (WAV or MP3):</label>
-                    <input type="file" id="audioFile" accept=".wav,.mp3" required>
+                    <label for="audioFile">Audio File (MP3 only):</label>
+                    <input type="file" id="audioFile" accept=".mp3" required>
+                    <p style="color: #666; font-size: 0.9em; margin-top: 5px;">Please upload your audio file in MP3 format only.</p>
                 </div>
                 <button type="submit" id="uploadButton">Upload and Process</button>
             </form>
@@ -164,7 +201,7 @@
             const resultContainer = document.getElementById('resultContainer');
             
             // Get the trigger service URL from environment or use default
-            const triggerServiceUrl = window.TRIGGER_SERVICE_URL || 'https://apmain-1053060340132.us-central1.run.app/';
+            const triggerServiceUrl = window.TRIGGER_SERVICE_URL || 'https://apmain8-1053060340132.us-central1.run.app/';
             
             uploadForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
