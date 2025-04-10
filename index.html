@@ -335,7 +335,6 @@
                     const formData = new FormData();
                     formData.append('file', audioFile);
                     
-                    // Updated to use the AP Delimit URL
                     const response = await fetch(`${AP_DELIMIT_URL}/process`, {
                         method: 'POST',
                         body: formData
@@ -346,14 +345,13 @@
                         throw new Error(`Processing failed: ${errorData}`);
                     }
                     
-                    const blob = await response.blob();
-                    const downloadUrl = URL.createObjectURL(blob);
+                    const data = await response.json();
                     
                     const downloadLink = document.getElementById('apDelimitDownloadLink');
-                    downloadLink.href = downloadUrl;
+                    downloadLink.href = data.download_url;
                     downloadLink.download = 'ap_delimit_result.wav';
                     
-                    apDelimitStatusMessage.textContent = 'Processing completed!';
+                    apDelimitStatusMessage.textContent = 'Processing completed! Download link will expire in 24 hours.';
                     apDelimitDownload.style.display = 'block';
                     
                 } catch (error) {
