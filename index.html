@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio Processing Service</title>
     <style>
+        /* Existing styles - no changes needed here */
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-
         body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
@@ -18,160 +18,94 @@
             background-color: #f8f8f8;
             padding: 20px;
         }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { margin-bottom: 20px; text-align: center; }
+        .upload-form, .status, .result, .how-to-use {
+            background-color: white; border-radius: 5px; padding: 20px;
+            margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-
-        h1, h2, h3 {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .upload-form, .status, .result {
-            background-color: white;
-            border-radius: 5px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        .file-input {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
+        .file-input { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
         input[type="file"] {
-            display: block;
+            display: block; width: 100%; padding: 10px;
+            border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px;
+        }
+        /* Progress Bar Style */
+        .progress-bar-container {
             width: 100%;
-            padding: 10px;
+            background-color: #f3f3f3;
             border: 1px solid #ddd;
             border-radius: 4px;
             margin-bottom: 15px;
+            height: 25px; /* Set a height */
+            overflow: hidden; /* Hide overflow */
+            display: none; /* Hidden by default */
         }
-
-        button {
-            display: block;
-            width: 100%;
-            padding: 10px;
+        .progress-bar {
+            width: 0%;
+            height: 100%; /* Fill container height */
             background-color: #4CAF50;
+            text-align: center;
+            line-height: 25px; /* Center text vertically */
             color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
+            font-size: 12px;
+            transition: width 0.4s ease;
         }
-
-        button:hover {
-            background-color: #45a049;
+        /* Button Style */
+        button {
+            display: block; width: 100%; padding: 10px; background-color: #4CAF50;
+            color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;
         }
-
-        .status {
-            text-align: center;
-        }
-
-        .result {
-            text-align: center;
-        }
-
+        button:hover { background-color: #45a049; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; } /* Disabled state */
+        .status, .result { text-align: center; }
         .processed-file {
-            margin-bottom: 30px;
-            padding: 15px;
-            border: 1px solid #eee;
-            border-radius: 5px;
-            background-color: #fafafa;
+            margin-bottom: 30px; padding: 15px; border: 1px solid #eee;
+            border-radius: 5px; background-color: #fafafa;
         }
-
-        .processed-file h3 {
-            margin-bottom: 15px;
-            color: #333;
-            font-size: 1.2em;
-        }
-
-        audio {
-            width: 100%;
-            margin: 20px 0;
-        }
-
-        .download-link {
-            margin-top: 15px;
-        }
-
+        .processed-file h3 { margin-bottom: 15px; color: #333; font-size: 1.2em; }
+        audio { width: 100%; margin: 20px 0; }
+        .download-link { margin-top: 15px; }
         .download-link a {
-            display: inline-block;
-            padding: 10px 15px;
-            background-color: #2196F3;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            margin: 0 5px;
+            display: inline-block; padding: 10px 15px; background-color: #2196F3;
+            color: white; text-decoration: none; border-radius: 4px; margin: 0 5px;
             transition: background-color 0.3s ease;
         }
-
-        .download-link a:hover {
-            background-color: #0b7dda;
-        }
-
-        .processing-stage {
-            margin-top: 10px;
-            font-style: italic;
-            color: #666;
-        }
-
-        .how-to-use {
-            background-color: white;
-            border-radius: 5px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        .how-to-use ul {
-            list-style-type: disc;
-            margin-left: 20px;
-            margin-top: 10px;
-        }
-
-        .how-to-use li {
-            margin-bottom: 8px;
-        }
-
-        .important-note {
-            color: #d32f2f;
-            font-weight: bold;
-            margin-top: 10px;
-        }
+        .download-link a:hover { background-color: #0b7dda; }
+        .processing-stage { margin-top: 10px; font-style: italic; color: #666; }
+        .how-to-use ul { list-style-type: disc; margin-left: 20px; margin-top: 10px; }
+        .how-to-use li { margin-bottom: 8px; }
+        .important-note { color: #d32f2f; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Audio Processing Service</h1>
-        
+
         <div class="how-to-use">
             <h2>How to Use</h2>
             <ul>
-                <li>This service works best with music that contains bass, drums, and vocals</li>
-                <li>MP3 and WAV files are accepted</li>
-                <li>Processing can take up to 30 minutes</li>
-                <li>Keep your browser window open during processing</li>
+                <li>This service works best with music containing bass, drums, and vocals.</li>
+                <li>MP3, WAV, FLAC, AIF, AIFF files are accepted.</li>
+                <li>Large files may take time to upload directly to storage.</li>
+                <li>Backend processing can take up to 30 minutes after upload.</li>
+                <li>Keep this browser window open during the direct upload phase.</li>
             </ul>
-            <p class="important-note">Important: Please do not close your browser window while processing is in progress!</p>
+            <p class="important-note">Important: You can close this window *after* the "Finalizing upload..." message appears and processing starts on the backend.</p>
         </div>
 
         <div class="upload-form">
             <h2>Upload Audio File</h2>
             <form id="uploadForm">
                 <div class="file-input">
-                    <label for="audioFile">Audio File (MP3 or WAV):</label>
-                    <input type="file" id="audioFile" accept=".mp3,.wav" required>
-                    <p style="color: #666; font-size: 0.9em; margin-top: 5px;">Please upload your audio file in MP3 or WAV format.</p>
+                    <label for="audioFile">Audio File (MP3, WAV, FLAC, AIF, AIFF):</label>
+                    <!-- Updated accept attribute -->
+                    <input type="file" id="audioFile" accept=".mp3,.wav,.flac,.aif,.aiff" required>
+                    <p style="color: #666; font-size: 0.9em; margin-top: 5px;">Select your audio file.</p>
+                </div>
+                 <!-- Progress Bar -->
+                <div class="progress-bar-container" id="progressBarContainer">
+                    <div class="progress-bar" id="progressBar">0%</div>
                 </div>
                 <button type="submit" id="uploadButton">Upload and Process</button>
             </form>
@@ -184,14 +118,16 @@
             <h2>Processed Audio</h2>
             <div class="processed-file">
                 <h3>Processed Audio</h3>
-                <audio id="processedAudio" controls></audio>
+                <!-- Audio player will be populated by download link click -->
+                <p>Click the download link below to get your file.</p>
+                <!-- <audio id="processedAudio" controls></audio> -->
                 <div class="download-link">
-                    <a id="downloadLink" href="#">Download Processed Audio</a>
+                    <a id="downloadLink" href="#" download="processed_audio.wav">Download Processed Audio</a>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const uploadForm = document.getElementById('uploadForm');
@@ -199,95 +135,241 @@
             const statusMessage = document.getElementById('statusMessage');
             const processingStage = document.getElementById('processingStage');
             const resultContainer = document.getElementById('resultContainer');
-            
+            const progressBarContainer = document.getElementById('progressBarContainer');
+            const progressBar = document.getElementById('progressBar');
+            const audioFileInput = document.getElementById('audioFile');
+
             // Get the trigger service URL from environment or use default
-            const triggerServiceUrl = window.TRIGGER_SERVICE_URL || 'https://apmainrefac-1053060340132.us-central1.run.app/';
-            
+            // Ensure this points to your *ap_main* service URL
+            const backendBaseUrl = window.TRIGGER_SERVICE_URL || 'https://apmainrefac-1053060340132.us-central1.run.app/';
+            const initiateUrl = backendBaseUrl + 'initiate_upload';
+            const finalizeUrl = backendBaseUrl + 'finalize_upload';
+            const statusUrlBase = backendBaseUrl + 'status/';
+            const downloadUrlBase = backendBaseUrl + 'download/'; // Base for getting download signed URL
+
             uploadForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
-                
-                // Disable the upload button
-                uploadButton.disabled = true;
-                uploadButton.textContent = 'Uploading...';
-                
-                // Get the file
-                const audioFile = document.getElementById('audioFile').files[0];
-                
-                if (!audioFile) {
+                resetUI(); // Reset UI elements
+
+                const file = audioFileInput.files[0];
+                if (!file) {
                     statusMessage.textContent = 'Please select an audio file.';
-                    uploadButton.disabled = false;
-                    uploadButton.textContent = 'Upload and Process';
                     return;
                 }
-                
+
+                // Disable button, show progress bar
+                uploadButton.disabled = true;
+                uploadButton.textContent = 'Starting Upload...';
+                progressBarContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                progressBar.textContent = '0%';
+                statusMessage.textContent = 'Initiating upload...';
+
+                const filename = file.name;
+                const contentType = file.type || 'application/octet-stream';
+
                 try {
-                    // Upload audio file
-                    const formData = new FormData();
-                    formData.append('audioFile', audioFile);
-                    
-                    const response = await fetch(triggerServiceUrl + 'upload', {
+                    // 1. Initiate Upload
+                    console.log(`Initiating upload for ${filename} (${contentType})`);
+                    const initiateResponse = await fetch(initiateUrl, {
                         method: 'POST',
-                        body: formData
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename, contentType }),
                     });
-                    
-                    if (!response.ok) throw new Error('Failed to upload file');
-                    const data = await response.json();
-                    
-                    // Start polling for status
+
+                    if (!initiateResponse.ok) {
+                        const errorData = await initiateResponse.json();
+                        throw new Error(`Failed to initiate upload: ${errorData.error || initiateResponse.statusText}`);
+                    }
+
+                    const { jobId, signedUrl, gcsPath, filename: returnedFilename } = await initiateResponse.json();
+                    console.log(`[${jobId}] Received Signed URL for ${returnedFilename}. Uploading directly to GCS...`);
+                    statusMessage.textContent = `Uploading ${returnedFilename} to storage...`;
+
+                    // 2. Direct Upload to GCS using XMLHttpRequest for progress
+                    await uploadDirectlyToGCS(jobId, signedUrl, file, contentType);
+
+                    console.log(`[${jobId}] GCS upload successful.`);
+                    statusMessage.textContent = 'Upload complete. Finalizing...';
+                    progressBar.style.width = '100%';
+                    progressBar.textContent = 'Finalizing...';
+
+                    // 3. Notify Backend of Completion
+                    const finalizeResponse = await fetch(finalizeUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ jobId, gcsPath, originalFilename: filename }),
+                    });
+
+                    if (!finalizeResponse.ok) {
+                        const errorData = await finalizeResponse.json();
+                        throw new Error(`Failed to finalize upload: ${errorData.error || finalizeResponse.statusText}`);
+                    }
+
+                    const finalizeResult = await finalizeResponse.json();
+                    console.log(`[${jobId}] Upload finalized by backend. Message: ${finalizeResult.message}`);
                     statusMessage.textContent = 'Processing started...';
-                    pollProcessingStatus(data.jobId);
-                    
+                    processingStage.textContent = 'Queued'; // Initial backend status
+
+                    // 4. Start Polling for Backend Processing Status
+                    pollProcessingStatus(jobId);
+
                 } catch (error) {
-                    console.error('Error:', error);
-                    statusMessage.textContent = 'Error: ' + error.message;
-                    uploadButton.disabled = false;
-                    uploadButton.textContent = 'Upload and Process';
+                    console.error("Upload process failed:", error);
+                    statusMessage.textContent = `Error: ${error.message}`;
+                    resetUploadButton();
+                    progressBarContainer.style.display = 'none';
                 }
             });
-            
+
+            function uploadDirectlyToGCS(jobId, url, file, contentType) {
+                return new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('PUT', url, true);
+                    xhr.setRequestHeader('Content-Type', contentType);
+
+                    xhr.upload.onprogress = function(event) {
+                        if (event.lengthComputable) {
+                            const percentComplete = Math.round((event.loaded / event.total) * 100);
+                            progressBar.style.width = percentComplete + '%';
+                            progressBar.textContent = percentComplete + '%';
+                            console.log(`[${jobId}] Upload Progress: ${percentComplete}%`);
+                        }
+                    };
+
+                    xhr.onload = function() {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(xhr.response);
+                        } else {
+                            reject(new Error(`GCS upload failed: ${xhr.status} ${xhr.statusText} - ${xhr.responseText}`));
+                        }
+                    };
+
+                    xhr.onerror = function() {
+                        reject(new Error('Network error during GCS upload.'));
+                    };
+
+                    xhr.send(file);
+                });
+            }
+
+
             async function pollProcessingStatus(jobId) {
-                try {
-                    const response = await fetch(triggerServiceUrl + 'status/' + jobId);
-                    if (!response.ok) throw new Error('Failed to get status');
+                const statusUrl = statusUrlBase + jobId;
+                 console.log(`[${jobId}] Polling status: ${statusUrl}`);
+                 try {
+                    const response = await fetch(statusUrl);
+                     if (!response.ok) {
+                         // Handle specific errors like 404 potentially
+                         if(response.status === 404) {
+                             throw new Error(`Job ${jobId} not found.`);
+                         }
+                         throw new Error(`Failed to get status (${response.status})`);
+                     }
                     const data = await response.json();
-                    
+                    console.log(`[${jobId}] Status received:`, data.status);
+
                     if (data.status === 'failed') {
-                        statusMessage.textContent = 'Processing failed: ' + data.error;
-                        processingStage.textContent = '';
-                        uploadButton.disabled = false;
-                        uploadButton.textContent = 'Upload and Process';
-                    }
-                    else if (data.status === 'completed') {
+                        statusMessage.textContent = 'Processing failed.';
+                        processingStage.textContent = `Error: ${data.error || 'Unknown error'}`;
+                        resetUploadButton();
+                        progressBarContainer.style.display = 'none'; // Hide progress bar on fail
+                    } else if (data.status === 'completed') {
                         statusMessage.textContent = 'Processing completed!';
                         processingStage.textContent = '';
-                        
-                        // Update audio player and download link
-                        const downloadUrl = `${triggerServiceUrl}download/${jobId}`;
-                        const processedAudio = document.getElementById('processedAudio');
-                        const downloadLink = document.getElementById('downloadLink');
-                        
-                        processedAudio.src = downloadUrl;
-                        downloadLink.href = downloadUrl;
-                        downloadLink.download = 'processed_audio.wav';
-                        
-                        // Show the result container
-                        resultContainer.style.display = 'block';
-                        uploadButton.disabled = false;
-                        uploadButton.textContent = 'Upload and Process';
-                    }
-                    else {
+                        progressBarContainer.style.display = 'none'; // Hide progress bar on success
+
+                        // Fetch the signed download URL
+                        await fetchAndSetDownloadLink(jobId);
+
+                        resultContainer.style.display = 'block'; // Show results
+                        resetUploadButton();
+
+                    } else {
                         statusMessage.textContent = 'Processing audio file...';
-                        processingStage.textContent = data.status || 'Processing in progress';
-                        setTimeout(() => pollProcessingStatus(jobId), 2000);
+                        // Display more detailed stage info if available
+                        let stageText = data.status || 'Processing in progress';
+                        if (data.pipeline_stages) {
+                            // Find the latest 'processing' or 'completed' stage
+                             const stages = data.pipeline_stages;
+                             const stageOrder = ['delimit', 'mvsep', 'stem_processing', 'ducking', 'normalization', 'combination', 'instcut', 'final_mix', 'two_bus'];
+                             let currentStage = '';
+                             for (const stageKey of stageOrder) {
+                                 if (stages[stageKey] === 'processing' || stages[stageKey] === 'starting' || stages[stageKey] === 'job_created' || stages[stageKey] === 'polling') {
+                                     currentStage = `Stage: ${stageKey.replace('_', ' ')}...`;
+                                     break;
+                                 } else if (stages[stageKey] === 'completed') {
+                                     currentStage = `Stage: ${stageKey.replace('_', ' ')} complete.`;
+                                     // Continue looking for the next active stage
+                                 }
+                             }
+                             if (currentStage) stageText = currentStage;
+                        }
+                         processingStage.textContent = stageText;
+                        // Continue polling
+                        setTimeout(() => pollProcessingStatus(jobId), 5000); // Poll every 5 seconds
                     }
-                } catch (error) {
-                    console.error('Error polling status:', error);
-                    statusMessage.textContent = 'Error checking status: ' + error.message;
-                    processingStage.textContent = '';
-                    uploadButton.disabled = false;
-                    uploadButton.textContent = 'Upload and Process';
-                }
+                 } catch (error) {
+                    console.error(`[${jobId}] Error polling status:`, error);
+                    statusMessage.textContent = 'Error checking status.';
+                    processingStage.textContent = `Details: ${error.message}`;
+                    // Optionally stop polling or implement backoff
+                    // For now, stop polling on error
+                    resetUploadButton();
+                    progressBarContainer.style.display = 'none';
+                 }
             }
+
+            async function fetchAndSetDownloadLink(jobId) {
+                const downloadInfoUrl = downloadUrlBase + jobId;
+                console.log(`[${jobId}] Fetching download info from: ${downloadInfoUrl}`);
+                 try {
+                     const response = await fetch(downloadInfoUrl);
+                     if (!response.ok) {
+                         const errorData = await response.json();
+                         throw new Error(errorData.error || `HTTP error ${response.status}`);
+                     }
+                     const data = await response.json();
+                     const downloadLink = document.getElementById('downloadLink');
+                     const filename = data.filename || `processed_${jobId}.wav`;
+
+                     downloadLink.href = data.downloadUrl;
+                     downloadLink.download = filename; // Set the suggested filename
+                     downloadLink.textContent = `Download ${filename}`;
+                     downloadLink.onclick = (e) => {
+                         // Optional: Add analytics or confirmation here before download starts
+                         console.log(`[${jobId}] User clicked download for ${filename}`);
+                     };
+                     console.log(`[${jobId}] Download link updated for ${filename}`);
+
+                 } catch (error) {
+                     console.error(`[${jobId}] Error fetching download URL:`, error);
+                     statusMessage.textContent = 'Error getting download link.';
+                     processingStage.textContent = `Details: ${error.message}`;
+                     // Optionally disable the download link
+                     const downloadLink = document.getElementById('downloadLink');
+                     downloadLink.textContent = 'Download Unavailable';
+                     downloadLink.href = '#';
+                     downloadLink.onclick = (e) => e.preventDefault(); // Prevent click
+                 }
+            }
+
+            function resetUI() {
+                statusMessage.textContent = '';
+                processingStage.textContent = '';
+                resultContainer.style.display = 'none';
+                progressBarContainer.style.display = 'none';
+                progressBar.style.width = '0%';
+                progressBar.textContent = '0%';
+                 // Clear previous file selection visually (optional)
+                 // audioFileInput.value = ''; // This often doesn't work for security reasons
+            }
+
+            function resetUploadButton() {
+                 uploadButton.disabled = false;
+                 uploadButton.textContent = 'Upload and Process';
+            }
+
         });
     </script>
 </body>
