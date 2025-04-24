@@ -1,304 +1,294 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Cybernetic Audio Optimization System</title>
-    <style type="text/css">
-        /* 1995-style page */
-        body {
-            background-color: #C0C0C0;
-            color: #000000;
-            font-family: "Courier New", Courier, monospace;
-            font-size: 12pt;
-            margin: 0;
-            padding: 0;
-        }
-        a:link   { color: #0000FF; text-decoration: underline; }
-        a:visited{ color: #800080; text-decoration: underline; }
-        a:active { color: #FF0000; text-decoration: underline; }
-        table.main {
-            width: 800px;
-            border: 2px ridge #808080;
-            background-color: #FFFFFF;
-            margin: 20px auto;
-        }
-        td.section {
-            padding: 8px;
-            border-bottom: 1px solid #000000;
-        }
-        h1 {
-            font-size: 18pt;
-            color: #000080;
-            margin: 8px 0;
-        }
-        h2 {
-            font-size: 14pt;
-            color: #000080;
-            margin: 8px 0;
-        }
-        hr {
-            border: 1px solid #000000;
-        }
-        marquee {
-            background-color: #FFFF00;
-            color: #000000;
-            font-weight: bold;
-        }
-        input, select, textarea, button {
-            font-family: "Courier New", Courier, monospace;
-            font-size: 12pt;
-            margin: 4px 0;
-        }
-        .note {
-            font-size: 10pt;
-            color: #800000;
-        }
-
-        /* —— New Animated Audio Graphic —— */
-        .emoji-eq {
-            text-align: center;
-            font-size: 2.5em;
-            margin: 40px auto 20px;
-        }
-        .emoji-eq span {
-            display: inline-block;
-            animation: bounce 0.8s ease-in-out infinite;
-        }
-        .emoji-eq span:nth-child(1) { animation-delay: 0s; }
-        .emoji-eq span:nth-child(2) { animation-delay: 0.2s; }
-        .emoji-eq span:nth-child(3) { animation-delay: 0.4s; }
-        .emoji-eq span:nth-child(4) { animation-delay: 0.6s; }
-        .emoji-eq span:nth-child(5) { animation-delay: 0.8s; }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50%      { transform: translateY(-20px); }
-        }
-
-        .ascii-bars {
-            text-align: center;
-            font-family: monospace;
-            font-size: 1.5em;
-            line-height: 1;
-            margin-bottom: 60px;
-        }
-        .ascii-bars span {
-            display: inline-block;
-            transform-origin: bottom;
-            animation: pulse 1.2s ease-in-out infinite;
-        }
-        .ascii-bars span:nth-child(odd)  { animation-delay: 0.1s; }
-        .ascii-bars span:nth-child(even) { animation-delay: 0.3s; }
-
-        @keyframes pulse {
-            0%, 100% { transform: scaleY(0.5); }
-            50%      { transform: scaleY(1.5); }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cybernetic Audio Optimization System</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font: 'Inter', sans-serif;
+      --bg: #f0f2f5;
+      --card-bg: #ffffff;
+      --primary: #0066ff;
+      --primary-hover: #0052cc;
+      --text: #333333;
+      --muted: #666666;
+      --error: #d32f2f;
+      --radius: 8px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 40px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 600;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 500;
+      margin-bottom: 16px;
+      color: var(--primary);
+      text-align: center;
+    }
+    .how-to-use ul {
+      list-style: disc inside;
+      margin-bottom: 16px;
+      color: var(--muted);
+    }
+    .how-to-use .important {
+      color: var(--error);
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    input[type="file"] {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+    }
+    .progress-container {
+      width: 100%;
+      background: #ececec;
+      border-radius: var(--radius);
+      overflow: hidden;
+      height: 20px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: var(--primary);
+      text-align: center;
+      line-height: 20px;
+      color: #fff;
+      font-size: 0.8rem;
+      transition: width 0.4s ease;
+    }
+    .btn {
+      padding: 14px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      margin-top: auto;
+    }
+    .btn:hover:not(:disabled) { background: var(--primary-hover); }
+    .btn:disabled { background: #cccccc; cursor: not-allowed; }
+    .status, .result {
+      text-align: center;
+      margin-top: 24px;
+    }
+    .status p { margin-bottom: 8px; }
+    .stage { font-style: italic; color: var(--muted); }
+    .download-link a {
+      display: inline-block;
+      padding: 12px 20px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: var(--radius);
+      text-decoration: none;
+      transition: background 0.3s;
+      font-weight: 500;
+    }
+    .download-link a:hover { background: var(--primary-hover); }
+  </style>
 </head>
-<body text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
-    <center>
-        <marquee behavior="alternate" scrollamount="4">Welcome to the Future!</marquee>
-        <table class="main" cellspacing="0" cellpadding="0">
-            <tr><td class="section" align="center">
-                <h1>Cybernetic Audio Optimization System</h1>
-            </td></tr>
-            <tr><td class="section">
-                <h2>How to Use</h2>
-                <ul>
-                    <li>This system works best with music containing bass, drums, and vocals.</li>
-                    <li>MP3 and WAV files only.</li>
-                    <li>Processing takes about 10 minutes per 1 minute of music.</li>
-                    <li>Keep this browser window open during processing.</li>
-                </ul>
-                <p class="note"><b></b></p>
-            </td></tr>
-            <tr><td class="section">
-                <h2>Upload Audio File</h2>
-                <form id="uploadForm">
-                    <table cellspacing="0" cellpadding="2">
-                        <tr><td><b>Audio File (MP3 or WAV):</b></td></tr>
-                        <tr><td><input type="file" id="audioFile" accept=".mp3,.wav,.flac,.aif,.aiff" required></td></tr>
-                        <tr><td><input type="submit" value="Upload and Process"></td></tr>
-                    </table>
-                </form>
-            </td></tr>
-            <tr><td class="section">
-                <div id="statusContainer">
-                    <p id="statusMessage"></p>
-                    <p id="processingStage"></p>
-                </div>
-            </td></tr>
-            <tr><td class="section">
-                <div id="resultContainer" style="display: none;">
-                    <h2>Processed Audio</h2>
-                    <p>Click the link below to download your file:</p>
-                    <a id="downloadLink" href="#" download="processed_audio.wav">Download Processed Audio</a>
-                </div>
-            </td></tr>
-        </table>
-
-        <!-- Animated Audio Graphic -->
-        <div class="emoji-eq">
-            <span>🔊</span>
-            <span>🎵</span>
-            <span>🔈</span>
-            <span>🎶</span>
-            <span>🔉</span>
+<body>
+  <header>
+    <h1>Cybernetic Audio Optimization System</h1>
+  </header>
+  <div class="grid">
+    <div class="card how-to-use">
+      <h2>How to Use</h2>
+      <ul>
+        <li>This system works best with music containing bass, drums, and vocals.</li>
+        <li>MP3 and WAV files only.</li>
+        <li>Processing takes about 10 minutes per 1 minute of music.</li>
+        <li>Keep this browser window open during processing.</li>
+      </ul>
+      <p class="important"></p>
+    </div>
+    <div class="card upload-form">
+      <h2>Upload Audio File</h2>
+      <form id="uploadForm">
+        <label for="audioFile">Select your audio file:</label>
+        <input type="file" id="audioFile" accept=".mp3,.wav,.flac,.aif,.aiff" required>
+        <div class="progress-container" id="progressContainer">
+          <div class="progress-bar" id="progressBar">0%</div>
         </div>
-        <div class="ascii-bars">
-            <span>▁</span><span>▂</span><span>▃</span><span>▄</span>
-            <span>▅</span><span>▆</span><span>▇</span><span>█</span>
-            <span>▇</span><span>▆</span><span>▅</span><span>▄</span>
-            <span>▃</span><span>▂</span><span>▁</span>
-        </div>
-    </center>
+        <button type="submit" class="btn" id="uploadButton">Upload & Process</button>
+      </form>
+    </div>
+  </div>
+  <div class="status" id="statusContainer">
+    <p id="statusMessage"></p>
+    <p class="stage" id="processingStage"></p>
+  </div>
+  <div class="result" id="resultContainer" style="display: none;">
+    <h2>Processed Audio</h2>
+    <p>Your file is ready for download:</p>
+    <div class="download-link">
+      <a id="downloadLink" href="#" download="processed_audio.wav">Download Processed Audio</a>
+    </div>
+  </div>
 
-    <script>
-        /* (JavaScript unchanged to preserve full functionality) */
-        document.addEventListener('DOMContentLoaded', function() {
-            const uploadForm = document.getElementById('uploadForm');
-            const uploadButton = uploadForm.querySelector('input[type="submit"]');
-            const statusMessage = document.getElementById('statusMessage');
-            const processingStage = document.getElementById('processingStage');
-            const resultContainer = document.getElementById('resultContainer');
-            const audioFileInput = document.getElementById('audioFile');
-            const progressBarContainer = document.createElement('div');
-            const progressBar = document.createElement('div');
+  <script>
+    // JavaScript unchanged, maintain existing functionality
+    document.addEventListener('DOMContentLoaded', () => {
+      const uploadForm = document.getElementById('uploadForm');
+      const uploadButton = document.getElementById('uploadButton');
+      const statusMessage = document.getElementById('statusMessage');
+      const processingStage = document.getElementById('processingStage');
+      const resultContainer = document.getElementById('resultContainer');
+      const progressContainer = document.getElementById('progressContainer');
+      const progressBar = document.getElementById('progressBar');
+      const audioFileInput = document.getElementById('audioFile');
 
-            progressBarContainer.style.width = '100%';
-            progressBarContainer.style.backgroundColor = '#FFFFFF';
-            progressBarContainer.style.border = '1px solid #000000';
-            progressBarContainer.style.height = '20px';
-            progressBarContainer.style.display = 'none';
-            progressBar.style.width = '0%';
-            progressBar.style.height = '100%';
-            progressBar.style.backgroundColor = '#000080';
-            progressBar.style.color = '#FFFFFF';
-            progressBar.style.textAlign = 'center';
-            progressBar.style.fontSize = '10pt';
-            progressBarContainer.appendChild(progressBar);
-            uploadForm.appendChild(progressBarContainer);
+      const backendBaseUrl = window.TRIGGER_SERVICE_URL || 'https://apmainrefac-1053060340132.us-central1.run.app/';
+      const initiateUrl = `${backendBaseUrl}initiate_upload`;
+      const finalizeUrl = `${backendBaseUrl}finalize_upload`;
+      const statusUrlBase = `${backendBaseUrl}status/`;
+      const downloadUrlBase = `${backendBaseUrl}download/`;
 
-            const backendBaseUrl = window.TRIGGER_SERVICE_URL || 'https://apmainrefac-1053060340132.us-central1.run.app/';
-            const initiateUrl = backendBaseUrl + 'initiate_upload';
-            const finalizeUrl = backendBaseUrl + 'finalize_upload';
-            const statusUrlBase = backendBaseUrl + 'status/';
-            const downloadUrlBase = backendBaseUrl + 'download/';
+      uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        resetUI();
+        const file = audioFileInput.files[0];
+        if (!file) { statusMessage.textContent = 'Please select an audio file.'; return; }
+        uploadButton.disabled = true;
+        uploadButton.textContent = 'Starting Upload...';
+        progressContainer.style.display = 'block';
 
-            uploadForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                resetUI();
-                const file = audioFileInput.files[0];
-                if (!file) { statusMessage.textContent = 'Please select an audio file.'; return; }
-                uploadButton.disabled = true;
-                uploadButton.value = 'Starting Upload...';
-                progressBarContainer.style.display = 'block';
-                statusMessage.textContent = 'Initiating upload...';
+        try {
+          const { jobId, signedUrl, gcsPath, filename: returnedFilename } = await fetch(initiateUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: file.name, contentType: file.type })
+          }).then(res => res.ok ? res.json() : Promise.reject(res));
 
-                const filename = file.name;
-                const contentType = file.type || 'application/octet-stream';
+          statusMessage.textContent = `Uploading ${returnedFilename} to storage...`;
+          await uploadDirectlyToGCS(jobId, signedUrl, file);
+          statusMessage.textContent = 'Upload complete. Finalizing...';
+          progressBar.style.width = '100%';
+          progressBar.textContent = 'Finalizing...';
 
-                try {
-                    const initRes = await fetch(initiateUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename, contentType }),
-                    });
-                    if (!initRes.ok) throw new Error('Failed to initiate upload');
-                    const { jobId, signedUrl, gcsPath } = await initRes.json();
-                    statusMessage.textContent = `Uploading ${filename}...`;
+          await fetch(finalizeUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobId, gcsPath, originalFilename: file.name })
+          }).then(res => res.ok ? res.json() : Promise.reject(res));
 
-                    await uploadDirectlyToGCS(jobId, signedUrl, file, contentType);
+          statusMessage.textContent = 'Processing started...';
+          processingStage.textContent = 'Queued';
+          pollProcessingStatus(jobId);
+        } catch (err) {
+          statusMessage.textContent = `Error: ${err.message}`;
+          resetButton();
+        }
+      });
 
-                    statusMessage.textContent = 'Upload complete. Finalizing...';
-                    progressBar.style.width = '100%';
-                    progressBar.textContent = 'Finalizing...';
-
-                    const finRes = await fetch(finalizeUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ jobId, gcsPath, originalFilename: filename }),
-                    });
-                    if (!finRes.ok) throw new Error('Failed to finalize upload');
-                    statusMessage.textContent = 'Processing started...';
-                    processingStage.textContent = 'Queued';
-
-                    pollProcessingStatus(jobId);
-                } catch (err) {
-                    statusMessage.textContent = `Error: ${err.message}`;
-                    resetUploadButton();
-                    progressBarContainer.style.display = 'none';
-                }
-            });
-
-            function uploadDirectlyToGCS(jobId, url, file, contentType) {
-                return new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('PUT', url, true);
-                    xhr.setRequestHeader('Content-Type', contentType);
-                    xhr.upload.onprogress = e => {
-                        if (e.lengthComputable) {
-                            const pct = Math.round((e.loaded / e.total) * 100) + '%';
-                            progressBar.style.width = pct;
-                            progressBar.textContent = pct;
-                        }
-                    };
-                    xhr.onload = () => {
-                        if (xhr.status >= 200 && xhr.status < 300) resolve();
-                        else reject(new Error(`GCS upload failed: ${xhr.status}`));
-                    };
-                    xhr.onerror = () => reject(new Error('Network error during GCS upload.'));
-                    xhr.send(file);
-                });
+      function uploadDirectlyToGCS(jobId, url, file) {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', url);
+          xhr.setRequestHeader('Content-Type', file.type);
+          xhr.upload.onprogress = e => {
+            if (e.lengthComputable) {
+              const pct = Math.round((e.loaded / e.total) * 100);
+              progressBar.style.width = pct + '%';
+              progressBar.textContent = pct + '%';
             }
-
-            async function pollProcessingStatus(jobId) {
-                try {
-                    const res = await fetch(statusUrlBase + jobId);
-                    if (!res.ok) throw new Error('Failed to get status');
-                    const data = await res.json();
-                    if (data.status === 'completed') {
-                        statusMessage.textContent = 'Processing completed!';
-                        processingStage.textContent = '';
-                        progressBarContainer.style.display = 'none';
-                        const base = (data.original_filename || 'output.wav').split('.').slice(0, -1).join('.');
-                        const fname = base + '_final_audiopuff.wav';
-                        const link = document.getElementById('downloadLink');
-                        link.href = downloadUrlBase + jobId;
-                        link.download = fname;
-                        link.textContent = `Download ${fname}`;
-                        resultContainer.style.display = 'block';
-                        resetUploadButton();
-                    } else if (data.status === 'failed') {
-                        statusMessage.textContent = 'Processing failed.';
-                        processingStage.textContent = `Error: ${data.error || 'Unknown'}`;
-                        resetUploadButton();
-                        progressBarContainer.style.display = 'none';
-                    } else {
-                        statusMessage.textContent = 'Processing audio file...';
-                        processingStage.textContent = data.status.replace(/_/g,' ');
-                        setTimeout(() => pollProcessingStatus(jobId), 5000);
-                    }
-                } catch (err) {
-                    statusMessage.textContent = `Error checking status: ${err.message}`;
-                    resetUploadButton();
-                    progressBarContainer.style.display = 'none';
-                }
-            }
-
-            function resetUI() {
-                statusMessage.textContent = '';
-                processingStage.textContent = '';
-                resultContainer.style.display = 'none';
-                progressBar.style.width = '0%';
-                progressBar.textContent = '';
-            }
-            function resetUploadButton() {
-                uploadButton.disabled = false;
-                uploadButton.value = 'Upload and Process';
-            }
+          };
+          xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.statusText));
+          xhr.onerror = () => reject(new Error('Network error during upload.'));
+          xhr.send(file);
         });
-    </script>
+      }
+
+      async function pollProcessingStatus(jobId) {
+        try {
+          const data = await fetch(statusUrlBase + jobId).then(res => res.ok ? res.json() : Promise.reject(res));
+          if (data.status === 'completed') {
+            statusMessage.textContent = 'Processing completed!';
+            progressContainer.style.display = 'none';
+            await fetchDownloadLink(jobId);
+            resultContainer.style.display = 'block';
+            resetButton();
+          } else if (data.status === 'failed') {
+            statusMessage.textContent = 'Processing failed.';
+            processingStage.textContent = data.error || 'Unknown error';
+            progressContainer.style.display = 'none';
+            resetButton();
+          } else {
+            statusMessage.textContent = 'Processing audio file...';
+            processingStage.textContent = data.status;
+            setTimeout(() => pollProcessingStatus(jobId), 5000);
+          }
+        } catch (err) {
+          statusMessage.textContent = 'Error checking status.';
+          resetButton();
+        }
+      }
+
+      async function fetchDownloadLink(jobId) {
+        const data = await fetch(downloadUrlBase + jobId).then(res => res.ok ? res.json() : Promise.reject(res));
+        const link = document.getElementById('downloadLink');
+        link.href = data.downloadUrl;
+        link.download = data.filename || link.download;
+        link.textContent = `Download ${link.download}`;
+      }
+
+      function resetUI() {
+        document.getElementById('statusMessage').textContent = '';
+        document.getElementById('processingStage').textContent = '';
+        resultContainer.style.display = 'none';
+        progressContainer.style.display = 'none';
+        progressBar.style.width = '0';
+        progressBar.textContent = '0%';
+      }
+
+      function resetButton() {
+        uploadButton.disabled = false;
+        uploadButton.textContent = 'Upload & Process';
+      }
+    });
+  </script>
 </body>
 </html>
