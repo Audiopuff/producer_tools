@@ -122,6 +122,7 @@
                 <p>Click the download link below to get your file.</p>
                 <!-- <audio id="processedAudio" controls></audio> -->
                 <div class="download-link">
+                    <!-- The link will be updated by JavaScript -->
                     <a id="downloadLink" href="#" download="processed_audio.wav">Download Processed Audio</a>
                 </div>
             </div>
@@ -145,7 +146,7 @@
             const initiateUrl = backendBaseUrl + 'initiate_upload';
             const finalizeUrl = backendBaseUrl + 'finalize_upload';
             const statusUrlBase = backendBaseUrl + 'status/';
-            const downloadUrlBase = backendBaseUrl + 'download/'; // Base for getting download signed URL
+            const downloadUrlBase = backendBaseUrl + 'download/'; // Base for *triggering* the file download
 
             uploadForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -178,13 +179,19 @@
                     });
 
                     if (!initiateResponse.ok) {
-                        const errorData = await initiateResponse.json();
-                        throw new Error(`Failed to initiate upload: ${errorData.error || initiateResponse.statusText}`);
+                        let errorText = `HTTP error ${initiateResponse.status}`;
+                        try {
+                           const errorData = await initiateResponse.json();
+                           errorText = `Failed to initiate upload: ${errorData.error || initiateResponse.statusText}`;
+                        } catch (e) {
+                            errorText = `Failed to initiate upload: ${initiateResponse.statusText || errorText}`;
+                        }
+                        throw new Error(errorText);
                     }
 
                     const { jobId, signedUrl, gcsPath, filename: returnedFilename } = await initiateResponse.json();
                     console.log(`[${jobId}] Received Signed URL for ${returnedFilename}. Uploading directly to GCS...`);
-                    statusMessage.textContent = `Uploading ${returnedFilename} to storage...`;
+                    statusMessage.textContent = `Uploading ${returnedFilename}...`;
 
                     // 2. Direct Upload to GCS using XMLHttpRequest for progress
                     await uploadDirectlyToGCS(jobId, signedUrl, file, contentType);
@@ -202,12 +209,18 @@
                     });
 
                     if (!finalizeResponse.ok) {
-                        const errorData = await finalizeResponse.json();
-                        throw new Error(`Failed to finalize upload: ${errorData.error || finalizeResponse.statusText}`);
+                        let errorText = `HTTP error ${finalizeResponse.status}`;
+                        try {
+                            const errorData = await finalizeResponse.json();
+                            errorText = `Failed to finalize upload: ${errorData.error || finalizeResponse.statusText}`;
+                        } catch (e) {
+                            errorText = `Failed to finalize upload: ${finalizeResponse.statusText || errorText}`;
+                        }
+                        throw new Error(errorText);
                     }
 
                     const finalizeResult = await finalizeResponse.json();
-                    console.log(`[${jobId}] Upload finalized by backend. Message: ${finalizeResult.message}`);
+                    console.log(`[${jobId}] Upload finalized by backend. Status: ${finalizeResult.status}`);
                     statusMessage.textContent = 'Processing started...';
                     processingStage.textContent = 'Queued'; // Initial backend status
 
@@ -233,7 +246,7 @@
                             const percentComplete = Math.round((event.loaded / event.total) * 100);
                             progressBar.style.width = percentComplete + '%';
                             progressBar.textContent = percentComplete + '%';
-                            console.log(`[${jobId}] Upload Progress: ${percentComplete}%`);
+                            // console.log(`[${jobId}] Upload Progress: ${percentComplete}%`); // Optional: less verbose logging
                         }
                     };
 
@@ -241,7 +254,17 @@
                         if (xhr.status >= 200 && xhr.status < 300) {
                             resolve(xhr.response);
                         } else {
-                            reject(new Error(`GCS upload failed: ${xhr.status} ${xhr.statusText} - ${xhr.responseText}`));
+                            // Try to get a more specific error from GCS response if available
+                            let gcsError = xhr.responseText || `Status ${xhr.status}`;
+                            if (xhr.responseXML) { // GCS often returns XML errors
+                                try {
+                                    const errorNodes = xhr.responseXML.getElementsByTagName('Message');
+                                    if (errorNodes.length > 0) {
+                                        gcsError = errorNodes[0].textContent;
+                                    }
+                                } catch (e) { /* Ignore parsing errors */ }
+                            }
+                            reject(new Error(`GCS upload failed: ${gcsError}`));
                         }
                     };
 
@@ -260,11 +283,14 @@
                  try {
                     const response = await fetch(statusUrl);
                      if (!response.ok) {
-                         // Handle specific errors like 404 potentially
-                         if(response.status === 404) {
-                             throw new Error(`Job ${jobId} not found.`);
+                         let errorText = `Failed to get status (${response.status})`;
+                         try {
+                            const errorData = await response.json();
+                            errorText = errorData.error || `HTTP error ${response.status}`;
+                         } catch (e) {
+                             errorText = `Failed to get status: ${response.statusText || response.status}`;
                          }
-                         throw new Error(`Failed to get status (${response.status})`);
+                         throw new Error(errorText);
                      }
                     const data = await response.json();
                     console.log(`[${jobId}] Status received:`, data.status);
@@ -279,31 +305,45 @@
                         processingStage.textContent = '';
                         progressBarContainer.style.display = 'none'; // Hide progress bar on success
 
-                        // Fetch the signed download URL
-                        await fetchAndSetDownloadLink(jobId);
+                        // --- **MODIFICATION POINT** ---
+                        // Generate the filename the backend would suggest
+                        const originalFilename = data.original_filename || 'output.wav';
+                        const baseName = originalFilename.substring(0, originalFilename.lastIndexOf('.')) || originalFilename;
+                        const downloadFilename = `${baseName}_final_audiopuff.wav`; // Construct the name
 
+                        // Update the download link to point *directly* to the download endpoint
+                        const downloadUrl = downloadUrlBase + jobId; // URL that serves the file
+                        const downloadLink = document.getElementById('downloadLink');
+
+                        downloadLink.href = downloadUrl; // Set href to trigger download from backend
+                        downloadLink.download = downloadFilename; // Set the desired filename
+                        downloadLink.textContent = `Download ${downloadFilename}`;
+                        downloadLink.onclick = null; // Remove any previous handler
+                        // No need for the fetchAndSetDownloadLink function anymore for the *final* file
+
+                        console.log(`[${jobId}] Download link set to trigger download for ${downloadFilename} from ${downloadUrl}`);
                         resultContainer.style.display = 'block'; // Show results
                         resetUploadButton();
+                        // --- **END MODIFICATION** ---
 
                     } else {
                         statusMessage.textContent = 'Processing audio file...';
                         // Display more detailed stage info if available
-                        let stageText = data.status || 'Processing in progress';
+                        let stageText = data.status ? data.status.replace(/_/g, ' ') : 'In progress'; // Basic status
                         if (data.pipeline_stages) {
-                            // Find the latest 'processing' or 'completed' stage
                              const stages = data.pipeline_stages;
                              const stageOrder = ['delimit', 'mvsep', 'stem_processing', 'ducking', 'normalization', 'combination', 'instcut', 'final_mix', 'two_bus'];
-                             let currentStage = '';
-                             for (const stageKey of stageOrder) {
-                                 if (stages[stageKey] === 'processing' || stages[stageKey] === 'starting' || stages[stageKey] === 'job_created' || stages[stageKey] === 'polling') {
-                                     currentStage = `Stage: ${stageKey.replace('_', ' ')}...`;
+                             let currentStageDesc = '';
+                             for (const stageKey of stageOrder.slice().reverse()) { // Find the last non-skipped/failed stage
+                                 const stageStatus = stages[stageKey];
+                                 if (stageStatus && stageStatus !== 'skipped' && stageStatus !== 'failed') {
+                                     currentStageDesc = `${stageKey.replace('_', ' ')} (${stageStatus})`;
                                      break;
-                                 } else if (stages[stageKey] === 'completed') {
-                                     currentStage = `Stage: ${stageKey.replace('_', ' ')} complete.`;
-                                     // Continue looking for the next active stage
                                  }
                              }
-                             if (currentStage) stageText = currentStage;
+                             if (currentStageDesc) {
+                                 stageText = `Stage: ${currentStageDesc}`;
+                             }
                         }
                          processingStage.textContent = stageText;
                         // Continue polling
@@ -313,46 +353,13 @@
                     console.error(`[${jobId}] Error polling status:`, error);
                     statusMessage.textContent = 'Error checking status.';
                     processingStage.textContent = `Details: ${error.message}`;
-                    // Optionally stop polling or implement backoff
-                    // For now, stop polling on error
                     resetUploadButton();
                     progressBarContainer.style.display = 'none';
                  }
             }
 
-            async function fetchAndSetDownloadLink(jobId) {
-                const downloadInfoUrl = downloadUrlBase + jobId;
-                console.log(`[${jobId}] Fetching download info from: ${downloadInfoUrl}`);
-                 try {
-                     const response = await fetch(downloadInfoUrl);
-                     if (!response.ok) {
-                         const errorData = await response.json();
-                         throw new Error(errorData.error || `HTTP error ${response.status}`);
-                     }
-                     const data = await response.json();
-                     const downloadLink = document.getElementById('downloadLink');
-                     const filename = data.filename || `processed_${jobId}.wav`;
-
-                     downloadLink.href = data.downloadUrl;
-                     downloadLink.download = filename; // Set the suggested filename
-                     downloadLink.textContent = `Download ${filename}`;
-                     downloadLink.onclick = (e) => {
-                         // Optional: Add analytics or confirmation here before download starts
-                         console.log(`[${jobId}] User clicked download for ${filename}`);
-                     };
-                     console.log(`[${jobId}] Download link updated for ${filename}`);
-
-                 } catch (error) {
-                     console.error(`[${jobId}] Error fetching download URL:`, error);
-                     statusMessage.textContent = 'Error getting download link.';
-                     processingStage.textContent = `Details: ${error.message}`;
-                     // Optionally disable the download link
-                     const downloadLink = document.getElementById('downloadLink');
-                     downloadLink.textContent = 'Download Unavailable';
-                     downloadLink.href = '#';
-                     downloadLink.onclick = (e) => e.preventDefault(); // Prevent click
-                 }
-            }
+            // --- **REMOVED fetchAndSetDownloadLink function - No longer needed for the final download** ---
+            // async function fetchAndSetDownloadLink(jobId, suggestedFilename) { ... }
 
             function resetUI() {
                 statusMessage.textContent = '';
@@ -361,8 +368,12 @@
                 progressBarContainer.style.display = 'none';
                 progressBar.style.width = '0%';
                 progressBar.textContent = '0%';
-                 // Clear previous file selection visually (optional)
-                 // audioFileInput.value = ''; // This often doesn't work for security reasons
+                // Reset download link state
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.textContent = 'Download Processed Audio';
+                downloadLink.href = '#'; // Reset href
+                downloadLink.removeAttribute('download'); // Remove download attribute
+                downloadLink.onclick = (e) => e.preventDefault(); // Prevent click initially
             }
 
             function resetUploadButton() {
