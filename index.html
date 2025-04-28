@@ -79,6 +79,14 @@
       margin-bottom: 16px;
       font-size: 0.95rem;
     }
+    input[type="email"] {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+      width: 100%;
+    }
     .progress-container {
       width: 100%;
       background: #ececec;
@@ -190,6 +198,8 @@
     <div class="card upload-form">
       <h2>Upload Audio File</h2>
       <form id="uploadForm">
+        <label for="email">Your Email Address:</label>
+        <input type="email" id="email" required placeholder="Enter your email address">
         <label for="audioFile">Select your audio file:</label>
         <input type="file" id="audioFile" accept=".mp3,.wav,.flac,.aif,.aiff" required>
         <div class="progress-container" id="progressContainer">
@@ -247,7 +257,18 @@
         e.preventDefault();
         resetUI();
         const file = audioFileInput.files[0];
-        if (!file) { statusMessage.textContent = 'Please select an audio file.'; return; }
+        const email = document.getElementById('email').value;
+        
+        if (!file) { 
+          statusMessage.textContent = 'Please select an audio file.'; 
+          return; 
+        }
+        
+        if (!email) {
+          statusMessage.textContent = 'Please enter your email address.';
+          return;
+        }
+        
         uploadButton.disabled = true;
         uploadButton.textContent = 'Starting Upload...';
         progressContainer.style.display = 'block';
@@ -256,7 +277,11 @@
           const { jobId, signedUrl, gcsPath, filename: returnedFilename } = await fetch(initiateUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: file.name, contentType: file.type })
+            body: JSON.stringify({ 
+              filename: file.name, 
+              contentType: file.type,
+              email: email  // Add email to the payload
+            })
           }).then(res => res.ok ? res.json() : Promise.reject(res));
 
           statusMessage.textContent = `Uploading ${returnedFilename} to storage...`;
@@ -268,7 +293,12 @@
           await fetch(finalizeUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jobId, gcsPath, originalFilename: file.name })
+            body: JSON.stringify({ 
+              jobId, 
+              gcsPath, 
+              originalFilename: file.name,
+              email: email  // Add email to the finalize payload
+            })
           }).then(res => res.ok ? res.json() : Promise.reject(res));
 
           statusMessage.textContent = 'Processing started...';
