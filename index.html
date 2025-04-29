@@ -345,7 +345,7 @@
           } else {
             statusMessage.textContent = 'Processing audio file...';
             processingStage.textContent = data.status;
-            setTimeout(() => pollProcessingStatus(jobId), 5000);
+            setTimeout(() => pollProcessingStatus(jobId), 45000);
           }
         } catch (err) {
           statusMessage.textContent = 'Error checking status.';
