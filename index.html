@@ -280,13 +280,16 @@
             body: JSON.stringify({ 
               filename: file.name, 
               contentType: file.type,
-              email: email
+              email: email  // Add email to the payload
             })
           }).then(res => res.ok ? res.json() : Promise.reject(res));
 
           statusMessage.textContent = `Uploading ${returnedFilename} to storage...`;
           await uploadDirectlyToGCS(jobId, signedUrl, file);
-          
+          statusMessage.textContent = 'Upload complete. Finalizing...';
+          progressBar.style.width = '100%';
+          progressBar.textContent = 'Finalizing...';
+
           await fetch(finalizeUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -294,15 +297,13 @@
               jobId, 
               gcsPath, 
               originalFilename: file.name,
-              email: email
+              email: email  // Add email to the finalize payload
             })
           }).then(res => res.ok ? res.json() : Promise.reject(res));
 
-          // Show final message and reset
-          statusMessage.textContent = 'Upload complete! You will receive an email when processing is finished.';
-          resetButton();
-          progressContainer.style.display = 'none';
-          
+          statusMessage.textContent = 'Processing started...';
+          processingStage.textContent = 'Queued';
+          pollProcessingStatus(jobId);
         } catch (err) {
           statusMessage.textContent = `Error: ${err.message}`;
           resetButton();
@@ -327,8 +328,185 @@
         });
       }
 
+      async function pollProcessingStatus(jobId) {
+        try {
+          const data = await fetch(statusUrlBase + jobId).then(res => res.ok ? res.json() : Promise.reject(res));
+          if (data.status === 'completed') {
+            statusMessage.textContent = 'Processing completed!';
+            progressContainer.style.display = 'none';
+            setupDownload(jobId);
+            resultContainer.style.display = 'block';
+            resetButton();
+          } else if (data.status === 'failed') {
+            statusMessage.textContent = 'Processing failed.';
+            processingStage.textContent = data.error || 'Unknown error';
+            progressContainer.style.display = 'none';
+            resetButton();
+          } else {
+            statusMessage.textContent = 'Processing audio file...';
+            processingStage.textContent = data.status;
+            setTimeout(() => pollProcessingStatus(jobId), 45000);
+          }
+        } catch (err) {
+          statusMessage.textContent = 'Error checking status.';
+          resetButton();
+        }
+      }
+
+      // Add this helper function for safer header parsing
+      function getFilenameFromHeaders(headers) {
+        try {
+          const contentDisposition = headers.get('Content-Disposition');
+          if (!contentDisposition) return 'processed_audio.wav';
+          
+          // Handle both "attachment; filename=" and "attachment; filename*=UTF-8''" formats
+          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const matches = filenameRegex.exec(contentDisposition);
+          if (matches?.[1]) {
+            // Clean up the filename
+            return decodeURIComponent(matches[1].replace(/['"]/g, ''));
+          }
+          return 'processed_audio.wav';
+        } catch (e) {
+          console.warn('Error parsing Content-Disposition:', e);
+          return 'processed_audio.wav';
+        }
+      }
+
+      // Add this abort controller for download cancellation
+      let currentDownloadController = null;
+
+      function setupDownload(jobId) {
+        downloadButton.onclick = async () => {
+          try {
+            // Cancel any existing download
+            if (currentDownloadController) {
+              currentDownloadController.abort();
+            }
+            currentDownloadController = new AbortController();
+
+            // Show download progress
+            document.querySelector('.download-progress').style.display = 'block';
+            downloadStatus.textContent = 'Starting download...';
+            downloadButton.disabled = true;
+            downloadButton.textContent = 'Downloading...'; // Visual feedback
+
+            const response = await fetch(`${downloadUrlBase}${jobId}`, {
+              signal: currentDownloadController.signal
+            });
+
+            if (!response.ok) {
+              throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+
+            // Verify content type
+            const contentType = response.headers.get('Content-Type');
+            if (!contentType?.includes('audio/')) {
+              throw new Error('Invalid content type received from server');
+            }
+
+            const filename = getFilenameFromHeaders(response.headers);
+            const contentLength = response.headers.get('Content-Length');
+            const total = parseInt(contentLength, 10);
+            let loaded = 0;
+            let startTime = Date.now();
+
+            // Create a ReadableStream to track download progress
+            const reader = response.body.getReader();
+            const chunks = [];
+
+            while (true) {
+              const {done, value} = await reader.read();
+              if (done) break;
+              
+              chunks.push(value);
+              loaded += value.length;
+              
+              // Update progress with speed calculation
+              if (contentLength) {
+                const progress = Math.round((loaded / total) * 100);
+                const elapsedSeconds = (Date.now() - startTime) / 1000;
+                const speedMBps = (loaded / (1024 * 1024)) / elapsedSeconds;
+                
+                downloadProgressBar.style.width = `${progress}%`;
+                downloadProgressBar.textContent = `${progress}%`;
+                downloadStatus.textContent = 
+                  `Downloading: ${formatBytes(loaded)} of ${formatBytes(total)} (${speedMBps.toFixed(1)} MB/s)`;
+              }
+            }
+
+            // Safety check for empty downloads
+            if (chunks.length === 0) {
+              throw new Error('No data received from server');
+            }
+
+            // Create and verify the blob
+            const blob = new Blob(chunks, { type: 'audio/wav' });
+            if (blob.size === 0) {
+              throw new Error('Downloaded file is empty');
+            }
+
+            // Initiate download
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            
+            // Use click() only in response to user action (which we have from button click)
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            // Cleanup
+            setTimeout(() => URL.revokeObjectURL(url), 40000); // Give browser time to handle download
+
+            // Reset UI
+            downloadStatus.textContent = 'Download complete!';
+            downloadButton.textContent = 'Download Processed Audio';
+            setTimeout(() => {
+              document.querySelector('.download-progress').style.display = 'none';
+              downloadButton.disabled = false;
+            }, 2000);
+
+          } catch (error) {
+            console.error('Download failed:', error);
+            downloadStatus.textContent = `Download failed: ${error.message}`;
+            downloadButton.textContent = 'Retry Download';
+            downloadButton.disabled = false;
+          } finally {
+            currentDownloadController = null;
+          }
+        };
+
+        // Add cancel download button if needed
+        const cancelButton = document.createElement('button');
+        cancelButton.className = 'btn btn-secondary';
+        cancelButton.textContent = 'Cancel Download';
+        cancelButton.style.marginLeft = '10px';
+        cancelButton.onclick = () => {
+          if (currentDownloadController) {
+            currentDownloadController.abort();
+            downloadStatus.textContent = 'Download cancelled';
+            downloadButton.disabled = false;
+            downloadButton.textContent = 'Download Processed Audio';
+          }
+        };
+        downloadButton.parentNode.appendChild(cancelButton);
+      }
+
+      // Add this improved bytes formatter
+      function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
       function resetUI() {
         document.getElementById('statusMessage').textContent = '';
+        document.getElementById('processingStage').textContent = '';
+        resultContainer.style.display = 'none';
         progressContainer.style.display = 'none';
         progressBar.style.width = '0';
         progressBar.textContent = '0%';
