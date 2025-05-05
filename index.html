@@ -148,8 +148,6 @@
     <div class="card upload-form">
       <h2>Upload Audio File</h2>
       <form id="uploadForm">
-        <label for="userEmail">Your email (for notification):</label>
-        <input type="email" id="userEmail" name="userEmail" required placeholder="you@example.com" style="margin-bottom: 16px;">
         <label for="audioFile">Select your audio file:</label>
         <input type="file" id="audioFile" accept=".mp3,.wav,.flac,.aif,.aiff" required>
         <div class="progress-container" id="progressContainer">
@@ -185,7 +183,7 @@
 
       const backendBaseUrl = window.TRIGGER_SERVICE_URL || 'https://apmainrefac-1053060340132.us-central1.run.app/';
       const initiateUrl = `${backendBaseUrl}initiate_upload`;
-      const finalizeUrl = 'https://finalize-upload-1053060340132.us-central1.run.app';
+      const finalizeUrl = `${backendBaseUrl}finalize_upload`;
       const statusUrlBase = `${backendBaseUrl}status/`;
       const downloadUrlBase = `${backendBaseUrl}download/`;
 
@@ -193,7 +191,6 @@
         e.preventDefault();
         resetUI();
         const file = audioFileInput.files[0];
-        const userEmail = document.getElementById('userEmail').value;
         if (!file) { statusMessage.textContent = 'Please select an audio file.'; return; }
         uploadButton.disabled = true;
         uploadButton.textContent = 'Starting Upload...';
@@ -203,22 +200,24 @@
           const { jobId, signedUrl, gcsPath, filename: returnedFilename } = await fetch(initiateUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: file.name, contentType: file.type, email: userEmail })
+            body: JSON.stringify({ filename: file.name, contentType: file.type })
           }).then(res => res.ok ? res.json() : Promise.reject(res));
 
-          statusMessage.textContent = 'Upload complete. You will receive an email when your job is complete. Finalizing...';
+          statusMessage.textContent = `Uploading ${returnedFilename} to storage...`;
           await uploadDirectlyToGCS(jobId, signedUrl, file);
-          statusMessage.textContent = 'Your file has been uploaded and queued for processing. You will receive an email when your job is complete.';
-          processingStage.textContent = '';
+          statusMessage.textContent = 'Upload complete. Finalizing...';
           progressBar.style.width = '100%';
-          progressBar.textContent = 'Complete';
-          resetButton();
+          progressBar.textContent = 'Finalizing...';
 
           await fetch(finalizeUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ jobId, gcsPath, originalFilename: file.name })
           }).then(res => res.ok ? res.json() : Promise.reject(res));
+
+          statusMessage.textContent = 'Processing started...';
+          processingStage.textContent = 'Queued';
+          pollProcessingStatus(jobId);
         } catch (err) {
           statusMessage.textContent = `Error: ${err.message}`;
           resetButton();
