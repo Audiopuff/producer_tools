@@ -148,6 +148,8 @@
     <div class="card upload-form">
       <h2>Upload Audio File</h2>
       <form id="uploadForm">
+        <label for="userEmail">Your email (for notification):</label>
+        <input type="email" id="userEmail" name="userEmail" required placeholder="you@example.com" style="margin-bottom: 16px;">
         <label for="audioFile">Select your audio file:</label>
         <input type="file" id="audioFile" accept=".mp3,.wav,.flac,.aif,.aiff" required>
         <div class="progress-container" id="progressContainer">
@@ -191,6 +193,7 @@
         e.preventDefault();
         resetUI();
         const file = audioFileInput.files[0];
+        const userEmail = document.getElementById('userEmail').value;
         if (!file) { statusMessage.textContent = 'Please select an audio file.'; return; }
         uploadButton.disabled = true;
         uploadButton.textContent = 'Starting Upload...';
@@ -200,10 +203,10 @@
           const { jobId, signedUrl, gcsPath, filename: returnedFilename } = await fetch(initiateUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: file.name, contentType: file.type })
+            body: JSON.stringify({ filename: file.name, contentType: file.type, email: userEmail })
           }).then(res => res.ok ? res.json() : Promise.reject(res));
 
-          statusMessage.textContent = `Uploading ${returnedFilename} to storage...`;
+          statusMessage.textContent = 'Upload complete. You will receive an email when your job is complete. Finalizing...';
           await uploadDirectlyToGCS(jobId, signedUrl, file);
           statusMessage.textContent = 'Your file has been uploaded and queued for processing. You will receive an email when your job is complete.';
           processingStage.textContent = '';
