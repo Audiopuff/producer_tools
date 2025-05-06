@@ -59,11 +59,12 @@
       margin-bottom: 16px;
       color: var(--muted);
     }
-    .how-to-use .important { /* Still useful for potential future messages or initial errors */
+    .how-to-use .important {
       color: var(--error);
       font-weight: 500;
       margin-top: 8px;
-      min-height: 1.2em; /* Reserve space */
+      min-height: 1.2em; /* Reserve space for error messages */
+      word-wrap: break-word;
     }
     form {
       display: flex;
@@ -120,7 +121,6 @@
     }
     .btn:hover:not(:disabled) { background: var(--primary-hover); }
     .btn:disabled { background: #cccccc; cursor: not-allowed; }
-    /* Removed styles for .status, .result, .download-link, .download-progress, .btn-secondary */
   </style>
 </head>
 <body>
@@ -132,11 +132,11 @@
       <h2>How to Use</h2>
       <ul>
         <li>This system works best with music containing bass, drums, and vocals.</li>
-        <li>MP3 and WAV files only.</li>
+        <li>MP3, WAV, FLAC, AIF, AIFF files only.</li>
         <li>Processing takes about 10 minutes per 1 minute of music.</li>
-        <li>Keep this browser window open during processing.</li> <!-- Keep this as upload must finish -->
+        <li>You will receive an email once processing is complete.</li>
       </ul>
-      <p class="important"></p> <!-- Keep for potential initial errors -->
+      <p class="important" id="errorMessageArea"></p> <!-- Dedicated area for error messages -->
     </div>
     <div class="card upload-form">
       <h2>Upload Audio File</h2>
@@ -152,11 +152,9 @@
       </form>
     </div>
   </div>
-  <!-- Removed statusContainer and resultContainer divs -->
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Basic feature detection
       if (!window.fetch) {
         alert('Your browser does not support required features. Please update your browser.');
         return;
@@ -167,95 +165,96 @@
       const progressContainer = document.getElementById('progressContainer');
       const progressBar = document.getElementById('progressBar');
       const audioFileInput = document.getElementById('audioFile');
-      const emailInput = document.getElementById('email'); // Added reference
-      const importantMessage = document.querySelector('.how-to-use .important'); // For potential errors
+      const emailInput = document.getElementById('email');
+      const errorMessageArea = document.getElementById('errorMessageArea');
 
       // --- URLs ---
-      const uploaderFunctionUrl = 'https://us-central1-audiopuff.cloudfunctions.net/uploader'; // <-- Use your actual uploader function URL
-      const initiateUrl = uploaderFunctionUrl; // Directly use the uploader URL
-      // URL of the Cloud Function that handles finalization and task queuing
-      const finalizeUrl = 'https://uploader-1053060340132.us-central1.run.app';
+      // !!! REPLACE WITH YOUR *UPLOADER* CLOUD FUNCTION URL !!!
+      const uploaderFunctionUrl = 'YOUR_UPLOADER_FUNCTION_URL_HERE';
+      const initiateUrl = uploaderFunctionUrl;
+
+      // !!! REPLACE WITH YOUR *TRIGGER* CLOUD RUN SERVICE URL (the one that takes GCS event and queues task) !!!
+      // This is what your GCS Object Finalize trigger calls. The frontend will now call this *after* GCS upload.
+      const finalizeAndQueueUrl = 'YOUR_TRIGGER_SERVICE_URL_HERE';
+
 
       uploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        resetUI(); // Clear previous state/errors
+        resetUI();
         const file = audioFileInput.files[0];
-        const email = emailInput.value; // Use the referenced input
+        const email = emailInput.value;
 
         if (!file) {
-          importantMessage.textContent = 'Please select an audio file.';
+          errorMessageArea.textContent = 'Please select an audio file.';
           return;
         }
         if (!email) {
-          importantMessage.textContent = 'Please enter your email address.';
+          errorMessageArea.textContent = 'Please enter your email address.';
           return;
         }
-        // Basic email format check (optional, but good practice)
         if (!/\S+@\S+\.\S+/.test(email)) {
-             importantMessage.textContent = 'Please enter a valid email address.';
+             errorMessageArea.textContent = 'Please enter a valid email address.';
              return;
         }
 
+        // Validate URLs before proceeding
+        if (initiateUrl === 'YOUR_UPLOADER_FUNCTION_URL_HERE' || finalizeAndQueueUrl === 'YOUR_TRIGGER_SERVICE_URL_HERE') {
+            errorMessageArea.textContent = 'Frontend configuration error: Backend URLs not set.';
+            alert('Developer: Please configure the uploaderFunctionUrl and finalizeAndQueueUrl in the script.');
+            return;
+        }
+
+
         uploadButton.disabled = true;
-        uploadButton.textContent = 'Uploading...';
-        progressContainer.style.display = 'block'; // Show upload progress
+        uploadButton.textContent = 'Preparing...';
+        progressContainer.style.display = 'block';
         progressBar.style.width = '0%';
         progressBar.textContent = '0%';
 
         try {
-          // 1. Initiate Upload (Get Signed URL)
+          // 1. Initiate Upload (Get Signed URL from 'uploader' Cloud Function)
+          progressBar.textContent = 'Initiating...';
           const { jobId, signedUrl, gcsPath, filename: returnedFilename } = await fetch(initiateUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               filename: file.name,
               contentType: file.type,
-              email: email // Send email during initiation
+              email: email
             })
           }).then(res => {
-             if (!res.ok) return res.text().then(text => { throw new Error(`Initiate failed: ${res.status} ${text}`) });
+             if (!res.ok) return res.text().then(text => { throw new Error(`Initiate failed (${res.status}): ${text || res.statusText}`) });
              return res.json();
           });
 
-          // 2. Upload Directly to GCS
-          // Update progress bar text during upload
-          progressBar.textContent = 'Uploading 0%'; // Initial text before progress event
+          // 2. Upload Directly to GCS using the Signed URL
+          uploadButton.textContent = 'Uploading...';
+          progressBar.textContent = 'Uploading 0%';
           await uploadDirectlyToGCS(jobId, signedUrl, file); // This function updates the progress bar internally
 
-          // 3. Finalize (Call Cloud Function to queue task)
-          uploadButton.textContent = 'Finalizing...'; // Update button text
-          progressBar.textContent = 'Finalizing...'; // Update progress bar text
-          progressBar.style.width = '100%'; // Visually complete after upload
+          // 3. Notify backend that upload is complete and to queue the task.
+          //    The 'trigger' service (GCS Eventarc target) handles this implicitly via GCS event.
+          //    The frontend no longer needs to call a separate 'finalize' endpoint on ap_main.
+          //    The 'trigger' service will be invoked by GCS automatically.
 
-          await fetch(finalizeUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              jobId,
-              gcsPath,
-              originalFilename: file.name // Send original filename if Function needs it
-            })
-          }).then(res => {
-            if (!res.ok) {
-                // Try to get error message from function response
-                return res.text().then(text => { throw new Error(`Finalization failed: ${res.status} ${text || 'Server error'}`)});
-            }
-             // No need to parse JSON response if we just show an alert
-             return; // Indicate success
-          });
+          progressBar.style.width = '100%';
+          progressBar.textContent = 'Upload Complete! Processing will start shortly.';
+          uploadButton.textContent = 'Processing Queued';
+
 
           // 4. Show Success Alert and Reset
-          progressContainer.style.display = 'none'; // Hide progress bar
-          alert("You will receive an email when the process is complete. Processing takes about 10 minutes per minute of audio. Be sure to check your spam folder.");
-          audioFileInput.value = ''; // Clear the file input
-          resetButton();
+          setTimeout(() => { // Give a moment for the user to see "Processing Queued"
+            progressContainer.style.display = 'none';
+            alert("Your audio has been uploaded! You will receive an email when processing is complete. This can take roughly 10 minutes per minute of audio. Please check your spam folder if you don't see it.");
+            audioFileInput.value = ''; // Clear the file input
+            resetButton();
+          }, 2000);
+
 
         } catch (err) {
           console.error('Upload/Finalize Error:', err);
-          // Display error in the reserved space or via alert
-          importantMessage.textContent = `Error: ${err.message || 'An unknown error occurred.'}`;
-          // alert(`Error: ${err.message || 'An unknown error occurred.'}`); // Alternative: use alert for errors too
-          progressContainer.style.display = 'none'; // Hide progress bar on error
+          errorMessageArea.textContent = `Error: ${err.message || 'An unknown error occurred.'}`;
+          progressContainer.style.display = 'none';
           resetButton();
         }
       });
@@ -270,43 +269,41 @@
             if (e.lengthComputable) {
               const pct = Math.round((e.loaded / e.total) * 100);
               progressBar.style.width = pct + '%';
-              progressBar.textContent = `Uploading ${pct}%`; // Show percentage during upload
+              progressBar.textContent = `Uploading ${pct}%`;
             } else {
-              progressBar.textContent = 'Uploading...'; // Fallback text
+              progressBar.textContent = 'Uploading...';
             }
           };
 
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
-              progressBar.style.width = '100%'; // Ensure it shows 100% on successful load
+              progressBar.style.width = '100%';
               progressBar.textContent = 'Upload Complete';
               resolve();
             } else {
-              reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+              reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText} - Response: ${xhr.responseText}`));
             }
           };
-          xhr.onerror = () => reject(new Error('Network error during upload.'));
+          xhr.onerror = () => reject(new Error('Network error during upload. Please check your connection.'));
           xhr.send(file);
         });
       }
 
       function resetUI() {
-        importantMessage.textContent = ''; // Clear any previous error message
-        progressContainer.style.display = 'none'; // Hide progress bar initially
-        progressBar.style.width = '0%';
-        progressBar.textContent = '0%';
-        // Don't reset button text/state here, let resetButton handle it
-        // Don't clear file input here, do it after successful submission
+        errorMessageArea.textContent = '';
+        if (progressContainer) { // Check if element exists
+            progressContainer.style.display = 'none';
+        }
+        if (progressBar) {
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+        }
       }
 
       function resetButton() {
         uploadButton.disabled = false;
         uploadButton.textContent = 'Upload & Process';
       }
-
-      // Removed polling function (pollProcessingStatus)
-      // Removed download setup function (setupDownload)
-      // Removed utility functions (getFilenameFromHeaders, formatBytes)
 
     });
   </script>
