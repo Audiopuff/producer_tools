@@ -170,12 +170,12 @@
 
       // --- URLs ---
       // !!! REPLACE WITH YOUR *UPLOADER* CLOUD FUNCTION URL !!!
-      const uploaderFunctionUrl = 'YOUR_UPLOADER_FUNCTION_URL_HERE';
+      const uploaderFunctionUrl = 'https://uploader-1053060340132.us-central1.run.app';
       const initiateUrl = uploaderFunctionUrl;
 
       // !!! REPLACE WITH YOUR *TRIGGER* CLOUD RUN SERVICE URL (the one that takes GCS event and queues task) !!!
       // This is what your GCS Object Finalize trigger calls. The frontend will now call this *after* GCS upload.
-      const finalizeAndQueueUrl = 'YOUR_TRIGGER_SERVICE_URL_HERE';
+      const finalizeAndQueueUrl = 'https://trigger-1053060340132.us-central1.run.app';
 
 
       uploadForm.addEventListener('submit', async (e) => {
