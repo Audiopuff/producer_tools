@@ -171,8 +171,8 @@
       const importantMessage = document.querySelector('.how-to-use .important'); // For potential errors
 
       // --- URLs ---
-      const backendBaseUrl = 'https://apmainrefac-1053060340132.us-central1.run.app/';
-      const initiateUrl = `${backendBaseUrl}initiate_upload`;
+      const uploaderFunctionUrl = 'https://us-central1-audiopuff.cloudfunctions.net/uploader'; // <-- Use your actual uploader function URL
+      const initiateUrl = uploaderFunctionUrl; // Directly use the uploader URL
       // URL of the Cloud Function that handles finalization and task queuing
       const finalizeUrl = 'https://uploader-1053060340132.us-central1.run.app';
 
